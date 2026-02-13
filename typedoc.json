@@ -1,0 +1,38 @@
+{
+  "name": "Zvec Node.js Binding API Reference",
+  "entryPoints": [
+    "./src/index.d.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "./docs/",
+  "sort": [
+    "source-order"
+  ],
+  "categorizeByGroup": true,
+  "groupOrder": [
+    "Global Configuration",
+    "Types",
+    "Schema",
+    "Doc",
+    "Collection",
+    "Index Parameters",
+    "Query Parameters",
+    "Options"
+  ],
+  "navigation": {
+    "includeGroups": true,
+    "includeCategories": false,
+    "includeFolders": false,
+    "compactFolders": true,
+    "excludeReferences": true
+  },
+  "excludeNotDocumented": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "plugin": [
+    "typedoc-material-theme"
+  ],
+  "themeColor": "#cb9820"
+}

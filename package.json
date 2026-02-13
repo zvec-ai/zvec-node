@@ -1,0 +1,58 @@
+{
+  "name": "@zvec/zvec",
+  "version": "0.2.0",
+  "description": "A lightweight, lightning-fast, in-process vector database",
+  "keywords": [
+    "Vector-database",
+    "In-process"
+  ],
+  "homepage": "https://zvec.org/en/",
+  "bugs": {
+    "url": "https://github.com/alibaba/zvec/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zvec-ai/zvec-node"
+  },
+  "license": "Apache-2.0",
+  "author": "Alibaba",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "src/index.js",
+    "src/index.d.ts",
+    "scripts/install.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "install": "node scripts/install.js",
+    "build": "node scripts/build.js",
+    "build:debug": "BUILD_TYPE=Debug node scripts/build.js",
+    "build:release": "BUILD_TYPE=Release node scripts/build.js",
+    "dev": "node scripts/dev.js",
+    "publish:bindings": "node scripts/publish.js",
+    "test": "node tests/basic-test.js",
+    "test:unit": "jest"
+  },
+  "optionalDependencies": {
+    "@zvec/bindings-darwin-arm64": "^0.2.0",
+    "@zvec/bindings-linux-arm64": "^0.2.0",
+    "@zvec/bindings-linux-x64": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "cmake-js": "^7.4.0",
+    "jest": "^29.7.0",
+    "node-addon-api": "*",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typedoc": "^0.28.16",
+    "typedoc-material-theme": "^1.4.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "bindings": "^1.5.0"
+  }
+}

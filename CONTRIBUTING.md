@@ -1,0 +1,89 @@
+# Contributing to Zvec Node.js Binding
+
+❤️ Thank you for your interest in contributing to the Zvec Node.js binding! This document provides the basic guidelines and instructions.
+
+## Overview
+
+The Zvec Node.js binding is created using [node-addon-api](https://github.com/nodejs/node-addon-api). The project incorporates the [Zvec](https://github.com/alibaba/zvec) source code as a submodule located in **/src/zvec/**, while the binding logic itself is found in **/src/binding**.
+
+The **/scripts** directory contains useful utilities for building and publishing, whereas **/packages** holds the compiled binaries for each platform. Running `npm run build` will generate a binary specific to your current platform.
+
+## Prerequisites
+
+- Ensure you have **Node.js** installed on your system.
+- This binding relies on **GNU Make** as the underlying build system. You must have **make** installed to compile the native components.
+- This binding requires the [Zvec](https://github.com/alibaba/zvec) source code as a Git submodule. If you haven't initialized the submodules yet, run:
+
+    ```bash
+    git submodule update --init --recursive
+    ```
+
+## Installation and Setup
+
+To set up the environment and install the binding, run:
+
+```bash
+npm install
+```
+
+This command will:
+
+1. Fetch necessary dependencies.
+1. Install pre-built binaries from optional dependencies based on your platform.
+1. Ensure the resulting binary is placed in the correct location for **Node.js** to load it.
+
+After installation, you can run a basic test to verify everything is working correctly:
+
+```bash
+npm test
+```
+
+## Development
+
+### Developing Locally
+
+When you modify the binding code in **/src/binding**, you can build and install your local version using:
+
+```bash
+npm run dev
+```
+
+This command will:
+
+1. Build the native binding from source code (internally calling `npm run build`)
+1. Package the resulting binary
+1. Install the locally built version
+
+> **Note**: Local Development Modifications
+>
+> During local development, the `dev` script will modify the **package.json** file. These modifications are intended solely for local development and testing purposes. Please ensure these changes are not included in your commits when submitting pull requests.
+
+### Testing Your Changes
+
+After modifying the binding code, you should run the test suite to ensure your changes don't break existing functionality:
+
+```bash
+npm run test:unit
+```
+
+### Editor Configuration
+
+If you are using **clangd** for code intelligence, you may want to merge the compilation database. This is necessary because the project relies on external submodules, which results in separate **compile_commands.json** files.
+
+```bash
+python ./scripts/merge_compile_commands.py
+```
+
+## Publishing Binaries
+
+Build the binary for the current platform and publish it:
+
+```bash
+npm run publish:bindings
+```
+
+### Cross-Platform Considerations
+
+Binaries built on one machine (OS/Architecture combination) are generally not compatible with other machines having different OS or architecture.
+
+When you run `npm run build`, it creates a native binary specifically tailored for the operating system and CPU architecture of the machine where the build occurred.

@@ -1,0 +1,7 @@
+.cache/
+.vscode/
+build/
+docs/
+node_modules/
+**/*.node
+*.tgz
