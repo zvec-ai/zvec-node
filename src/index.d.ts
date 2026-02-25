@@ -770,7 +770,7 @@ export declare class ZVecCollection {
   /**
    * Gets statistics about this collection.
    */
-  readonly stats: { docCount: number; indexCompleteness: Record<string, number> };
+  readonly stats: { docCount: number; indexCompleteness: Record<string, number>; };
 
   /**
    * Inserts a single document into the collection.
@@ -921,7 +921,7 @@ export declare class ZVecCollection {
    */
   createIndexSync(params: {
     fieldName: string;
-    indexParams: ZVecIndexParams;
+    indexParams: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecIVFIndexParams | ZVecInvertIndexParams;
     indexOptions?: ZVecCreateIndexOptions;
   }): void;
 
