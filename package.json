@@ -1,6 +1,6 @@
 {
   "name": "@zvec/zvec",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A lightweight, lightning-fast, in-process vector database",
   "keywords": [
     "Vector-database",
