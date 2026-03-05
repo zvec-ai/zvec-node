@@ -35,6 +35,7 @@
     "dev": "node scripts/dev.js",
     "pack-local": "node scripts/pack-local.js",
     "publish:bindings": "node scripts/publish-bindings.js",
+    "publish:main": "node scripts/publish-main.js",
     "test": "node tests/basic-test.js",
     "test:unit": "jest"
   },

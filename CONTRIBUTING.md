@@ -4,9 +4,12 @@
 
 ## Overview
 
-The Zvec Node.js binding is created using [node-addon-api](https://github.com/nodejs/node-addon-api). The project incorporates the [Zvec](https://github.com/alibaba/zvec) source code as a submodule located in **/src/zvec/**, while the binding logic itself is found in **/src/binding**.
+The Zvec Node.js binding is built using [node-addon-api](https://github.com/nodejs/node-addon-api). The project architecture is as follows:
 
-The **/scripts** directory contains useful utilities for building and publishing, whereas **/packages** holds the compiled binaries for each platform. Running `npm run build` will generate a binary specific to your current platform.
+- **/src/zvec/**: Contains the core [Zvec](https://github.com/alibaba/zvec) source code (included as a Git submodule).
+- **/src/binding**: Contains the binding logic.
+- **/scripts**: Contains utilities for building, packing, and publishing the project.
+- **/packages**: Holds the compiled binaries for specific platforms. Running `npm run build` generates a binary in this directory tailored to your current platform and architecture.
 
 ## Prerequisites
 
@@ -74,12 +77,37 @@ If you are using **clangd** for code intelligence, you may want to merge the com
 python ./scripts/merge_compile_commands.py
 ```
 
+## Local Distribution
+
+If you need to build the binding from source and generate a single, self-contained package (including the pre-built binary for your current platform), use the local packing script.
+
+```bash
+npm run pack-local
+```
+
+This command will:
+
+1. Build the native binding from source (internally calling `npm run build`).
+1. Package and generate a tarball in the project root.
+
+You can install this generated package directly in any Node.js project:
+
+```bash
+npm install ./zvec-zvec-<version>.tgz
+```
+
 ## Publishing Binaries
 
 Build the binary for the current platform and publish it:
 
 ```bash
 npm run publish:bindings
+```
+
+Publish the main wrapper package (which contains the logic to download the correct platform-specific binary):
+
+```bash
+npm run publish:main
 ```
 
 ### Cross-Platform Considerations
