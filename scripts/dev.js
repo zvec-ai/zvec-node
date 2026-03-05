@@ -22,7 +22,7 @@ try {
   }
 
   // Pack
-  const packResult = execSync('npm pack', { stdio: 'inherit', cwd: platformPackageDir, encoding: 'utf8' });
+  const packResult = execSync('npm pack', { cwd: platformPackageDir, encoding: 'utf8' });
   const lines = packResult.trim().split('\n');
   const tarballFilename = lines[lines.length - 1].trim();
   const tarballPath = path.join(platformPackageDir, tarballFilename);
