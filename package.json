@@ -23,6 +23,7 @@
     "src/index.js",
     "src/index.d.ts",
     "scripts/install.js",
+    "zvec_node_binding.node",
     "README.md",
     "LICENSE"
   ],
@@ -32,7 +33,9 @@
     "build:debug": "BUILD_TYPE=Debug node scripts/build.js",
     "build:release": "BUILD_TYPE=Release node scripts/build.js",
     "dev": "node scripts/dev.js",
-    "publish:bindings": "node scripts/publish.js",
+    "pack-local": "node scripts/pack-local.js",
+    "publish:bindings": "node scripts/publish-bindings.js",
+    "publish:main": "node scripts/publish-main.js",
     "test": "node tests/basic-test.js",
     "test:unit": "jest"
   },

@@ -21,17 +21,13 @@ try {
     throw new Error(`Platform package does not exist: ${targetPath}`);
   }
 
-  // Pack
-  const packResult = execSync('npm pack', { stdio: 'inherit', cwd: platformPackageDir, encoding: 'utf8' });
-  const lines = packResult.trim().split('\n');
-  const tarballFilename = lines[lines.length - 1].trim();
-  const tarballPath = path.join(platformPackageDir, tarballFilename);
-  if (!fs.existsSync(tarballPath)) {
-    throw new Error(`Tarball not found: ${tarballPath}`);
-  }
+  // Copy the binary to the root directory
+  const destPath = path.join(PACKAGE_ROOT, 'zvec_node_binding.node');
+  fs.copyFileSync(targetPath, destPath);
+  console.log(`Binary copied from ${targetPath} to ${destPath}`);
 
-  // Install from local package
-  execSync(`npm install ${tarballPath}`, { stdio: 'inherit', cwd: PACKAGE_ROOT });
+  // Pack
+  execSync('npm pack', { stdio: 'inherit', cwd: PACKAGE_ROOT, encoding: 'utf8' });
 } catch (error) {
   console.error('❌ Error during build and packaging:', error.message);
   process.exit(1);
