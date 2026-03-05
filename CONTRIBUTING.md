@@ -79,7 +79,7 @@ python ./scripts/merge_compile_commands.py
 
 ## Local Distribution
 
-If you need to build the binding from source and generate a single, self-contained package (including the pre-built binary for your current platform), use the local packing script.
+If you prefer to build the binding from source and generate a single, self-contained package (including the pre-built binary for your current platform), use the local packing script.
 
 ```bash
 npm run pack-local
