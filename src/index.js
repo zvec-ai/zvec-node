@@ -1,12 +1,21 @@
+const path = require('path');
+const fs = require('fs');
+
+
 let binding;
 
 
 try {
-  const platformPackage = `@zvec/bindings-${process.platform}-${process.arch}`;
-  binding = require(platformPackage);
+  const bundledBinaryPath = path.join(__dirname, '..', 'zvec_node_binding.node');
+  if (fs.existsSync(bundledBinaryPath)) {   // Try bundled binary first
+    binding = require(bundledBinaryPath);
+  } else {  // Fall back to platform-specific prebuilt binary package
+    const platformPackage = `@zvec/bindings-${process.platform}-${process.arch}`;
+    binding = require(platformPackage);
+  }
 } catch (err) {
   throw new Error(
-    `zvec Error: Prebuilt binary not found for ${process.platform}-${process.arch}. ` +
+    `Zvec Error: Prebuilt binary not found for ${process.platform}-${process.arch}. ` +
     `This platform may not be supported. `
   );
 }
