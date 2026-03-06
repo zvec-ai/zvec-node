@@ -28,3 +28,7 @@ npm install @zvec/zvec
 
 - Linux (x86_64/ARM64)
 - macOS (ARM64)
+
+### 🛠️ Building from Source
+
+If you prefer to build Zvec from source, please check the [Building from Source](https://zvec.org/en/docs/build/) guide.
