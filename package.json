@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zvec-ai/zvec-node"
+    "url": "git+https://github.com/zvec-ai/zvec-node.git"
   },
   "license": "Apache-2.0",
   "author": "Alibaba",
