@@ -15,7 +15,7 @@ try {
   }
 } catch (err) {
   throw new Error(
-    `Zvec Error: Prebuilt binary not found for ${process.platform}-${process.arch}. ` +
+    `Zvec Error: Failed to load prebuilt binary for ${process.platform}-${process.arch}. ` +
     `This platform may not be supported. `
   );
 }
