@@ -29,6 +29,7 @@
   ],
   "scripts": {
     "install": "node scripts/install.js",
+    "bump": "node scripts/bump-version.js",
     "build": "node scripts/build.js",
     "build:debug": "BUILD_TYPE=Debug node scripts/build.js",
     "build:release": "BUILD_TYPE=Release node scripts/build.js",
@@ -37,8 +38,7 @@
     "publish:bindings": "node scripts/publish-bindings.js",
     "publish:main": "node scripts/publish-main.js",
     "test": "node tests/basic-test.js",
-    "test:unit": "jest",
-    "version": "node scripts/bump-version.js"
+    "test:unit": "jest"
   },
   "optionalDependencies": {
     "@zvec/bindings-darwin-arm64": "^0.2.0",
