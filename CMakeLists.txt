@@ -157,3 +157,17 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     SUFFIX ".node"
     OUTPUT_NAME "zvec_node_binding"
 )
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(APPLE)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_STRIP} -x "$<TARGET_FILE:${PROJECT_NAME}>"
+            COMMENT "Stripping symbols (macOS)"
+        )
+    else()
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:${PROJECT_NAME}>"
+            COMMENT "Stripping symbols (Linux)"
+        )
+    endif()
+endif()
