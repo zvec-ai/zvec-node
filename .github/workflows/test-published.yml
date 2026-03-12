@@ -1,0 +1,55 @@
+name: Test Published Package
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-published:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x64
+          - os: ubuntu-latest
+            arch: arm64
+          - os: macos-latest
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    # runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          architecture: ${{ matrix.arch }}
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Patch Test Imports
+        run: node scripts/patch-imports.js tests @zvec/zvec
+
+      - name: Install Latest Zvec
+        run: |
+          rm -rf node_modules/@zvec
+          npm install @zvec/zvec@latest --force
+
+      - name: Verify Installed Version
+        run: npm ls @zvec/zvec
+
+      - name: Run Unit Tests
+        run: npm run test:unit
