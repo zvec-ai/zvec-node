@@ -35,7 +35,7 @@ jobs:
         run: node -p "process.platform + ' ' + process.arch"
 
       - name: Install Dependencies
-        run: npm install --no-package-lock --omit=optional
+        run: npm install --no-package-lock
 
       - name: Patch Test Imports
         run: node scripts/patch-imports.js tests @zvec/zvec
