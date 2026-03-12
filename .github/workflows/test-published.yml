@@ -1,0 +1,43 @@
+name: Test Published Package
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-published:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+
+      - name: Prepare Test Workspace
+        run: |
+          mkdir pkg-test
+          cp -r tests pkg-test/
+          cp package.json pkg-test/
+
+      - name: Patch test imports
+        run: node scripts/patch-imports.js pkg-test/tests @zvec/zvec
+
+      - name: Install Dependencies
+        working-directory: pkg-test
+        run: |
+          npm install
+          npm install @zvec/zvec
+
+      - name: Run Unit Tests
+        working-directory: pkg-test
+        run: npm run test:unit

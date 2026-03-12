@@ -1,4 +1,4 @@
-name: CI Tests
+name: Test Latest Source
 
 on:
   workflow_dispatch:
@@ -17,13 +17,12 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  test-source:
     runs-on: ubuntu-latest
 
     steps:
       - name: Check CPU Info
-        run: |
-          lscpu
+        run: lscpu
 
       - name: Checkout Code
         uses: actions/checkout@v4
