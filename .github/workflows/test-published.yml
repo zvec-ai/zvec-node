@@ -12,7 +12,20 @@ permissions:
 
 jobs:
   test-published:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x64
+          - os: ubuntu-latest
+            arch: arm64
+          - os: macos-latest
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    # runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
@@ -22,22 +35,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
-
-      - name: Prepare Test Workspace
-        run: |
-          mkdir pkg-test
-          cp -r tests pkg-test/
-          cp package.json pkg-test/
-
-      - name: Patch test imports
-        run: node scripts/patch-imports.js pkg-test/tests @zvec/zvec
+          architecture: ${{ matrix.arch }}
 
       - name: Install Dependencies
-        working-directory: pkg-test
+        run: npm ci
+
+      - name: Patch Test Imports
+        run: node scripts/patch-imports.js tests @zvec/zvec
+
+      - name: Install Latest Zvec
         run: |
-          npm install
-          npm install @zvec/zvec
+          rm -rf node_modules/@zvec
+          npm install @zvec/zvec@latest --force
+
+      - name: Verify Installed Version
+        run: npm ls @zvec/zvec
 
       - name: Run Unit Tests
-        working-directory: pkg-test
         run: npm run test:unit
