@@ -30,6 +30,8 @@ for (const dir of dirs) {
   });
 }
 
+console.log(`\nBumping main (${type})`);
+
 execSync(`npm version ${type} --no-git-tag-version`, {
   cwd: root,
   stdio: "inherit",
