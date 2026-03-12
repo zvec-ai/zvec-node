@@ -15,17 +15,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x64
-          - os: ubuntu-latest
-            arch: arm64
-          - os: macos-latest
-            arch: arm64
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
 
     runs-on: ${{ matrix.os }}
-
-    # runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
@@ -35,7 +30,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
-          architecture: ${{ matrix.arch }}
+
+      - name: Debug Environment
+        run: node -p "process.platform + ' ' + process.arch"
 
       - name: Install Dependencies
         run: npm ci
