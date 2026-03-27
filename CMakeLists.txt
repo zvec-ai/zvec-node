@@ -56,11 +56,11 @@ endif()
 # --- Dependency groups ---
 find_package(Threads REQUIRED)
 
-set(zvec_core_deps
-        zvec_turbo
-)
 
 if (NOT WIN32)
+    set(zvec_core_deps
+            # empty
+    )
     set(zvec_ailego_deps
         arrow
         parquet
@@ -68,7 +68,6 @@ if (NOT WIN32)
         ${CMAKE_THREAD_LIBS_INIT}
         ${CMAKE_DL_LIBS}
     )
-
     set(zvec_db_deps
         roaring
         rocksdb
@@ -87,6 +86,9 @@ if (NOT WIN32)
 else ()
     # Windows static libraries use different naming conventions
     set(PROTOBUF_LIB libprotobuf)
+    set(zvec_core_deps
+            zvec_turbo
+    )
     set(zvec_ailego_deps
             arrow_static
             parquet_static
