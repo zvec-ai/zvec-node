@@ -52,42 +52,78 @@ endif()
 # --- Dependency groups ---
 find_package(Threads REQUIRED)
 
-set(zvec_ailego_deps
-    arrow
-    parquet
-    arrow_bundled_dependencies
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CMAKE_DL_LIBS}
-)
+if (NOT WIN32)
+    set(zvec_ailego_deps
+        arrow
+        parquet
+        arrow_bundled_dependencies
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${CMAKE_DL_LIBS}
+    )
 
-set(zvec_core_deps
-    # empty
-)
+    set(zvec_core_deps
+        # empty
+    )
 
-set(zvec_db_deps
-    roaring
-    rocksdb
-    arrow
-    arrow_acero
-    arrow_bundled_dependencies
-    arrow_compute
-    arrow_dataset
-    parquet
-    antlr4-runtime
-    ${GLOG_LIB}
-    ${GFLAGS_LIB}
-    ${PROTOBUF_LIB}
-    lz4
-)
+    set(zvec_db_deps
+        roaring
+        rocksdb
+        arrow
+        arrow_acero
+        arrow_bundled_dependencies
+        arrow_compute
+        arrow_dataset
+        parquet
+        antlr4-runtime
+        ${GLOG_LIB}
+        ${GFLAGS_LIB}
+        ${PROTOBUF_LIB}
+        lz4
+    )
+else ()
+    # Windows static libraries use different naming conventions
+    set(PROTOBUF_LIB libprotobuf)
+    set(zvec_ailego_deps
+            arrow_static
+            parquet_static
+            arrow_bundled_dependencies
+            ${CMAKE_THREAD_LIBS_INIT}
+            ${CMAKE_DL_LIBS}
+    )
+    set(zvec_db_deps
+            roaring
+            rocksdb
+            arrow_static
+            arrow_acero_static
+            arrow_bundled_dependencies
+            arrow_compute_static
+            arrow_dataset_static
+            parquet_static
+            antlr4-runtime-static
+            ${GLOG_LIB}
+            ${GFLAGS_LIB}
+            ${PROTOBUF_LIB}
+            lz4
+            rpcrt4
+            shlwapi
+    )
+endif ()
 
 # --- Create INTERFACE targets for Zvec components ---
 
 # zvec_ailego: links libzvec_ailego.a + its deps
 add_library(zvec-ailego INTERFACE)
+if (WIN32)
+    target_link_libraries(zvec-ailego INTERFACE
+            zvec_ailego
+            ${zvec_ailego_deps}
+    )
+else ()
 target_link_libraries(zvec-ailego INTERFACE
     -lzvec_ailego
     ${zvec_ailego_deps}
 )
+endif ()
 
 # zvec_core: links libzvec_core.a via special flags (handled externally), but declare logical deps
 add_library(zvec-core INTERFACE)
@@ -103,10 +139,17 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
 elseif(APPLE)
     target_link_libraries(zvec-core INTERFACE
-        "-Wl,-force_load,${ZVEC_LIB_DIR}/libzvec_core.a"
+        -Wl,-force_load ${ZVEC_LIB_DIR}/libzvec_core.a
         zvec-ailego
         ${zvec_core_deps}
     )
+elseif (WIN32)
+    target_link_libraries(zvec-core INTERFACE
+            zvec_core
+            zvec-ailego
+            ${zvec_core_deps}
+    )
+    target_link_options(zvec-core INTERFACE "/WHOLEARCHIVE:zvec_core")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -129,6 +172,15 @@ elseif(APPLE)
         zvec-ailego
         ${zvec_db_deps}
     )
+elseif (WIN32)
+    target_link_libraries(zvec-db INTERFACE
+            zvec_db
+            zvec-core
+            zvec-ailego
+            ${zvec_db_deps}
+    )
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 
