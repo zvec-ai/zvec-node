@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+cmake_policy(SET CMP0091 NEW)
 project(zvec_node_binding)
 
 
@@ -6,6 +7,9 @@ if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 endif()
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,6 +56,10 @@ endif()
 # --- Dependency groups ---
 find_package(Threads REQUIRED)
 
+set(zvec_core_deps
+        zvec_turbo
+)
+
 if (NOT WIN32)
     set(zvec_ailego_deps
         arrow
@@ -59,10 +67,6 @@ if (NOT WIN32)
         arrow_bundled_dependencies
         ${CMAKE_THREAD_LIBS_INIT}
         ${CMAKE_DL_LIBS}
-    )
-
-    set(zvec_core_deps
-        # empty
     )
 
     set(zvec_db_deps
@@ -209,13 +213,17 @@ target_link_libraries(${PROJECT_NAME}
         zvec-db
 )
 
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ucrt)
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
     PREFIX ""
     SUFFIX ".node"
     OUTPUT_NAME "zvec_node_binding"
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT WIN32)
     if(APPLE)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_STRIP} -x "$<TARGET_FILE:${PROJECT_NAME}>"
