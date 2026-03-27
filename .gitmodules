@@ -1,3 +1,4 @@
 [submodule "src/zvec"]
 	path = src/zvec
 	url = https://github.com/alibaba/zvec
+	branch = feat/win-compilation
