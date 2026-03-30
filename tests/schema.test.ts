@@ -2,6 +2,7 @@ import {
   ZVecCollectionSchema,
   ZVecDataType,
   ZVecHnswIndexParams,
+  ZVecHnswRabitqIndexParams,
   ZVecIndexType,
   ZVecInvertIndexParams,
   ZVecIVFIndexParams,
@@ -189,5 +190,65 @@ describe('CollectionSchema', () => {
     expect(schema.field('tag').name).toBe('tag');
     expect(schema.field('tag').dataType).toBe(ZVecDataType.ARRAY_STRING);
     expect(schema.field('tag').indexParams!.indexType).toBe(ZVecIndexType.INVERT);
+  });
+
+
+  const isLinuxX64 = process.platform === 'linux' && process.arch === 'x64';
+
+  (isLinuxX64 ? it : it.skip)('should parse HNSW-RaBitQ index params correctly', () => {
+    const schema = new ZVecCollectionSchema({
+      name: 'test_hnsw_rabitq',
+      vectors: [
+        {
+          name: 'vector1',
+          dataType: ZVecDataType.VECTOR_FP32,
+          dimension: 128,
+          indexParams: {
+            indexType: ZVecIndexType.HNSW_RABITQ,
+            metricType: ZVecMetricType.L2,
+            totalBits: 9,
+            numClusters: 100,
+            m: 19,
+            efConstruction: 200,
+            sampleCount: 30
+          }
+        },
+        {
+          name: 'vector2',
+          dataType: ZVecDataType.VECTOR_FP32,
+          dimension: 64,
+          indexParams: {
+            indexType: ZVecIndexType.HNSW_RABITQ,
+            metricType: ZVecMetricType.IP
+          }
+        }
+      ]
+    });
+
+    expect(schema).toBeInstanceOf(ZVecCollectionSchema);
+    expect(schema.name).toBe('test_hnsw_rabitq');
+
+    const vectors = schema.vectors();
+    expect(vectors.length).toBe(2);
+    expect(vectors[0].name).toBe('vector1');
+    expect(vectors[0].dataType).toBe(ZVecDataType.VECTOR_FP32);
+    expect(vectors[0].dimension).toBe(128);
+    expect(vectors[0].indexParams!.indexType).toBe(ZVecIndexType.HNSW_RABITQ);
+    expect(vectors[0].indexParams!.metricType).toBe(ZVecMetricType.L2);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).totalBits).toBe(9);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).numClusters).toBe(100);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).m).toBe(19);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).efConstruction).toBe(200);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).sampleCount).toBe(30);
+    expect(vectors[1].name).toBe('vector2');
+    expect(vectors[1].dataType).toBe(ZVecDataType.VECTOR_FP32);
+    expect(vectors[1].dimension).toBe(64);
+    expect(vectors[1].indexParams!.indexType).toBe(ZVecIndexType.HNSW_RABITQ);
+    expect(vectors[1].indexParams!.metricType).toBe(ZVecMetricType.IP);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).totalBits).toBe(7);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).numClusters).toBe(16);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).m).toBe(50);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).efConstruction).toBe(500);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).sampleCount).toBe(0);
   });
 });
