@@ -49,8 +49,9 @@ export type ZVecDataType = typeof ZVecDataType[keyof typeof ZVecDataType];
 export declare const ZVecIndexType: {
   readonly UNDEFINED: 0;
   readonly HNSW: 1;
-  readonly IVF: 3;
-  readonly FLAT: 4;
+  readonly IVF: 2;
+  readonly FLAT: 3;
+  readonly HNSW_RABITQ: 4;
   readonly INVERT: 10;
 };
 
@@ -209,7 +210,7 @@ export interface ZVecIndexParams {
  * @group Index Parameters
  */
 export interface ZVecFlatIndexParams extends ZVecIndexParams {
-  /** Must be `ZVecIndexType.FLAT` (4). */
+  /** Must be `ZVecIndexType.FLAT` (3). */
   readonly indexType: typeof ZVecIndexType.FLAT;
 
   /**
@@ -262,12 +263,64 @@ export interface ZVecHnswIndexParams extends ZVecIndexParams {
 
 
 /**
+ * Configuration parameters for an HNSW-RaBitQ index on a vector field.
+ *
+ * HNSW RaBitQ combines HNSW graph-based search with RaBitQ quantization
+ * for improved memory efficiency while maintaining high recall.
+ *
+ * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
+ *
+ * @group Index Parameters
+ */
+export interface ZVecHnswRabitqIndexParams extends ZVecIndexParams {
+  /** Must be `ZVecIndexType.HNSW_RABITQ` (4). */
+  readonly indexType: typeof ZVecIndexType.HNSW_RABITQ;
+
+  /**
+   * Distance metric used for similarity computation.
+   * @default ZVecMetricType.IP
+   */
+  readonly metricType?: ZVecMetricType;
+
+  /**
+   * Total number of bits used for RaBitQ quantization.
+   * @default 7
+   */
+  readonly totalBits?: number;
+
+  /**
+   * Number of clusters used in RaBitQ quantization.
+   * @default 16
+   */
+  readonly numClusters?: number;
+
+  /**
+   * Number of bi-directional links created for every new element during construction.
+   * @default 50
+   */
+  readonly m?: number;
+
+  /**
+   * Size of the dynamic candidate list for nearest neighbors during index construction.
+   * @default 500
+   */
+  readonly efConstruction?: number;
+
+  /**
+   * Number of samples used for RaBitQ training.
+   * @default 0
+   */
+  readonly sampleCount?: number;
+}
+
+
+/**
  * Configuration parameters for an IVF index on a vector field.
  *
  * @group Index Parameters
  */
 export interface ZVecIVFIndexParams extends ZVecIndexParams {
-  /** Must be `ZVecIndexType.IVF` (3). */
+  /** Must be `ZVecIndexType.IVF` (2). */
   readonly indexType: typeof ZVecIndexType.IVF;
 
   /**
@@ -365,12 +418,31 @@ export interface ZVecHnswQueryParams extends ZVecQueryParams {
 
 
 /**
+ * Query-time parameters for searches performed against an HNSW-RaBitQ index.
+ *
+ * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecHnswRabitqQueryParams extends ZVecQueryParams {
+  /** Must be `ZVecIndexType.HNSW_RABITQ` (4). */
+  readonly indexType: typeof ZVecIndexType.HNSW_RABITQ;
+
+  /**
+   * Size of the dynamic candidate list during search. Larger values improve recall but slow down search.
+   * @default 300
+   */
+  readonly ef?: number;
+}
+
+
+/**
  * Query-time parameters for searches performed against an IVF index.
  *
  * @group Query Parameters
  */
 export interface ZVecIVFQueryParams extends ZVecQueryParams {
-  /** Must be `ZVecIndexType.IVF` (3). */
+  /** Must be `ZVecIndexType.IVF` (2). */
   readonly indexType: typeof ZVecIndexType.IVF;
 
   /**
@@ -431,7 +503,7 @@ export interface ZVecQuery {
    * Query-time parameters to fine-tune search behavior.
    * @default undefined
    */
-  params?: ZVecHnswQueryParams | ZVecIVFQueryParams;
+  params?: ZVecHnswQueryParams | ZVecHnswRabitqQueryParams | ZVecIVFQueryParams;
 }
 
 
@@ -628,7 +700,7 @@ export interface ZVecVectorSchema {
    * Vector index parameters for this vector field.
    * @default undefined
    */
-  readonly indexParams?: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecIVFIndexParams;
+  readonly indexParams?: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecHnswRabitqIndexParams | ZVecIVFIndexParams;
 }
 
 
@@ -921,7 +993,7 @@ export declare class ZVecCollection {
    */
   createIndexSync(params: {
     fieldName: string;
-    indexParams: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecIVFIndexParams | ZVecInvertIndexParams;
+    indexParams: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecHnswRabitqIndexParams | ZVecIVFIndexParams | ZVecInvertIndexParams;
     indexOptions?: ZVecCreateIndexOptions;
   }): void;
 

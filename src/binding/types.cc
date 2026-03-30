@@ -217,6 +217,7 @@ Napi::Object CreateIndexTypeObject(Napi::Env env) {
   obj.Set("HNSW", static_cast<uint32_t>(zvec::IndexType::HNSW));
   obj.Set("IVF", static_cast<uint32_t>(zvec::IndexType::IVF));
   obj.Set("FLAT", static_cast<uint32_t>(zvec::IndexType::FLAT));
+  obj.Set("HNSW_RABITQ", static_cast<uint32_t>(zvec::IndexType::HNSW_RABITQ));
   obj.Set("INVERT", static_cast<uint32_t>(zvec::IndexType::INVERT));
   obj.Freeze();
   return obj;
@@ -235,6 +236,7 @@ zvec::Result<zvec::IndexType> ParseIndexType(const Napi::Value &value) {
     case zvec::IndexType::HNSW:
     case zvec::IndexType::IVF:
     case zvec::IndexType::FLAT:
+    case zvec::IndexType::HNSW_RABITQ:
     case zvec::IndexType::INVERT:
       return static_cast<zvec::IndexType>(raw);
     default:

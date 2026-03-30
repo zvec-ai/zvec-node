@@ -16,24 +16,30 @@ zvec::Result<zvec::IndexParams::Ptr> ParseIndexParams(const Napi::Value &value);
 
 Napi::Object CreateIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
 
-zvec::Result<zvec::FlatIndexParams::Ptr> ParseFlatIndexParams(
+zvec::Result<zvec::FlatIndexParams::OPtr> ParseFlatIndexParams(
     const Napi::Object &obj);
 
 Napi::Object CreateFlatIndexParams(Napi::Env env,
                                    zvec::IndexParams::Ptr params);
 
-zvec::Result<zvec::HnswIndexParams::Ptr> ParseHnswIndexParams(
+zvec::Result<zvec::HnswIndexParams::OPtr> ParseHnswIndexParams(
     const Napi::Object &obj);
 
 Napi::Object CreateHnswIndexParams(Napi::Env env,
                                    zvec::IndexParams::Ptr params);
 
-zvec::Result<zvec::IVFIndexParams::Ptr> ParseIVFIndexParams(
+zvec::Result<zvec::IVFIndexParams::OPtr> ParseIVFIndexParams(
     const Napi::Object &obj);
 
 Napi::Object CreateIVFIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
 
-zvec::Result<zvec::InvertIndexParams::Ptr> ParseInvertIndexParams(
+zvec::Result<zvec::HnswRabitqIndexParams::OPtr> ParseHnswRabitqIndexParams(
+    const Napi::Object &obj);
+
+Napi::Object CreateHnswRabitqIndexParams(Napi::Env env,
+                                         zvec::IndexParams::Ptr params);
+
+zvec::Result<zvec::InvertIndexParams::OPtr> ParseInvertIndexParams(
     const Napi::Object &obj);
 
 Napi::Object CreateInvertIndexParams(Napi::Env env,
@@ -62,6 +68,9 @@ zvec::Result<zvec::HnswQueryParams::Ptr> ParseHnswQueryParams(
     const Napi::Object &obj);
 
 zvec::Result<zvec::IVFQueryParams::Ptr> ParseIVFQueryParams(
+    const Napi::Object &obj);
+
+zvec::Result<zvec::HnswRabitqQueryParams::Ptr> ParseHnswRabitqQueryParams(
     const Napi::Object &obj);
 /*** Query Parameters  ***/
 

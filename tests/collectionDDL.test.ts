@@ -76,7 +76,7 @@ describe('Collection Data Definition Operations', () => {
     expect(vectors[0].indexParams!.indexType).toBe(ZVecIndexType.HNSW);
     expect(vectors[0].indexParams!.metricType).toBe(ZVecMetricType.COSINE);
     expect((vectors[0].indexParams as ZVecHnswIndexParams)["m"]).toBe(77);
-    expect(vectors[0].indexParams!.quantizeType).toBe(ZVecQuantizeType.FP16);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).quantizeType).toBe(ZVecQuantizeType.FP16);
     const fields = collection.schema.fields();
     expect(fields.length).toBe(1);
     expect(fields[0].name).toBe('tag');
@@ -105,7 +105,7 @@ describe('Collection Data Definition Operations', () => {
     expect(vectors[0].indexParams!.indexType).toBe(ZVecIndexType.HNSW);
     expect(vectors[0].indexParams!.metricType).toBe(ZVecMetricType.COSINE);
     expect((vectors[0].indexParams as ZVecHnswIndexParams)["m"]).toBe(77);
-    expect(vectors[0].indexParams!.quantizeType).toBe(ZVecQuantizeType.FP16);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).quantizeType).toBe(ZVecQuantizeType.FP16);
     const fields = collection.schema.fields();
     expect(fields.length).toBe(1);
     expect(fields[0].name).toBe('tag');

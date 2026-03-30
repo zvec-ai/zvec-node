@@ -1,7 +1,11 @@
 import {
   ZVecCollectionSchema,
   ZVecDataType,
+  ZVecHnswIndexParams,
+  ZVecHnswRabitqIndexParams,
   ZVecIndexType,
+  ZVecInvertIndexParams,
+  ZVecIVFIndexParams,
   ZVecMetricType,
   ZVecQuantizeType
 } from '../src/index';
@@ -38,27 +42,27 @@ describe('CollectionSchema', () => {
     expect(vectors[0].name).toBe('vector');
     expect(vectors[0].dataType).toBe(ZVecDataType.VECTOR_FP32);
     expect(vectors[0].dimension).toBe(10);
-    expect(vectors[0].indexParams.indexType).toBe(ZVecIndexType.HNSW);
-    expect(vectors[0].indexParams.metricType).toBe(ZVecMetricType.COSINE);
-    expect(vectors[0].indexParams["m"]).toBe(500);
-    expect(vectors[0].indexParams["efConstruction"]).toBe(500);
-    expect(vectors[0].indexParams.quantizeType).toBe(ZVecQuantizeType.FP16);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).indexType).toBe(ZVecIndexType.HNSW);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).metricType).toBe(ZVecMetricType.COSINE);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams)["m"]).toBe(500);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams)["efConstruction"]).toBe(500);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).quantizeType).toBe(ZVecQuantizeType.FP16);
 
     const fields = schema.fields();
     expect(fields.length).toBe(1);
     expect(fields[0].name).toBe('tag');
     expect(fields[0].dataType).toBe(ZVecDataType.ARRAY_STRING);
     expect(fields[0].nullable).toBe(true);
-    expect(fields[0].indexParams.indexType).toBe(ZVecIndexType.INVERT);
+    expect((fields[0].indexParams as ZVecInvertIndexParams).indexType).toBe(ZVecIndexType.INVERT);
 
     expect(schema.vector('vector').name).toBe('vector');
     expect(schema.vector('vector').dataType).toBe(ZVecDataType.VECTOR_FP32);
     expect(schema.vector('vector').dimension).toBe(10);
-    expect(schema.vector('vector').indexParams.indexType).toBe(ZVecIndexType.HNSW);
+    expect((schema.vector('vector').indexParams as ZVecHnswIndexParams).indexType).toBe(ZVecIndexType.HNSW);
 
     expect(schema.field('tag').name).toBe('tag');
     expect(schema.field('tag').dataType).toBe(ZVecDataType.ARRAY_STRING);
-    expect(schema.field('tag').indexParams.indexType).toBe(ZVecIndexType.INVERT);
+    expect((schema.field('tag').indexParams as ZVecInvertIndexParams).indexType).toBe(ZVecIndexType.INVERT);
   });
 
 
@@ -126,27 +130,27 @@ describe('CollectionSchema', () => {
     expect(vectors[0].name).toBe('vector1');
     expect(vectors[0].dataType).toBe(ZVecDataType.VECTOR_FP32);
     expect(vectors[0].dimension).toBe(10);
-    expect(vectors[0].indexParams.indexType).toBe(ZVecIndexType.HNSW);
-    expect(vectors[0].indexParams.metricType).toBe(ZVecMetricType.COSINE);
-    expect(vectors[0].indexParams["m"]).toBe(1000);
-    expect(vectors[0].indexParams["efConstruction"]).toBe(500);
-    expect(vectors[0].indexParams.quantizeType).toBe(ZVecQuantizeType.FP16);
+    expect(vectors[0].indexParams!.indexType).toBe(ZVecIndexType.HNSW);
+    expect(vectors[0].indexParams!.metricType).toBe(ZVecMetricType.COSINE);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).m).toBe(1000);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).efConstruction).toBe(500);
+    expect((vectors[0].indexParams as ZVecHnswIndexParams).quantizeType).toBe(ZVecQuantizeType.FP16);
     expect(vectors[1].name).toBe('vector2');
     expect(vectors[1].dataType).toBe(ZVecDataType.VECTOR_FP16);
     expect(vectors[1].dimension).toBe(4);
-    expect(vectors[1].indexParams.indexType).toBe(ZVecIndexType.IVF);
-    expect(vectors[1].indexParams.metricType).toBe(ZVecMetricType.IP);
-    expect(vectors[1].indexParams["nList"]).toBe(101);
-    expect(vectors[1].indexParams["nIters"]).toBe(202);
-    expect(vectors[1].indexParams.quantizeType).toBe(ZVecQuantizeType.UNDEFINED);
+    expect(vectors[1].indexParams!.indexType).toBe(ZVecIndexType.IVF);
+    expect(vectors[1].indexParams!.metricType).toBe(ZVecMetricType.IP);
+    expect((vectors[1].indexParams as ZVecIVFIndexParams).nList).toBe(101);
+    expect((vectors[1].indexParams as ZVecIVFIndexParams).nIters).toBe(202);
+    expect((vectors[1].indexParams as ZVecIVFIndexParams).quantizeType).toBe(ZVecQuantizeType.UNDEFINED);
     expect(vectors[2].name).toBe('vector3');
     expect(vectors[2].dataType).toBe(ZVecDataType.SPARSE_VECTOR_FP32);
     expect(vectors[2].dimension).toBe(0);
-    expect(vectors[2].indexParams.indexType).toBe(ZVecIndexType.HNSW);
-    expect(vectors[2].indexParams.metricType).toBe(ZVecMetricType.IP);
-    expect(vectors[2].indexParams["m"]).toBe(50);
-    expect(vectors[2].indexParams["efConstruction"]).toBe(500);
-    expect(vectors[2].indexParams.quantizeType).toBe(ZVecQuantizeType.UNDEFINED);
+    expect(vectors[2].indexParams!.indexType).toBe(ZVecIndexType.HNSW);
+    expect(vectors[2].indexParams!.metricType).toBe(ZVecMetricType.IP);
+    expect((vectors[2].indexParams as ZVecHnswIndexParams).m).toBe(50);
+    expect((vectors[2].indexParams as ZVecHnswIndexParams).efConstruction).toBe(500);
+    expect((vectors[2].indexParams as ZVecHnswIndexParams).quantizeType).toBe(ZVecQuantizeType.UNDEFINED);
 
     const fields = schema.fields();
     expect(fields.length).toBe(3);
@@ -157,34 +161,94 @@ describe('CollectionSchema', () => {
     expect(fields[1].name).toBe('price');
     expect(fields[1].dataType).toBe(ZVecDataType.INT32);
     expect(fields[1].nullable).toBe(false);
-    expect(fields[1].indexParams.indexType).toBe(ZVecIndexType.INVERT);
-    expect(fields[1].indexParams.enableRangeOptimization).toBe(true);
-    expect(fields[1].indexParams.enableExtendedWildcard).toBe(false);
+    expect(fields[1].indexParams!.indexType).toBe(ZVecIndexType.INVERT);
+    expect((fields[1].indexParams as ZVecInvertIndexParams).enableRangeOptimization).toBe(true);
+    expect((fields[1].indexParams as ZVecInvertIndexParams).enableExtendedWildcard).toBe(false);
     expect(fields[2].name).toBe('tag');
     expect(fields[2].dataType).toBe(ZVecDataType.ARRAY_STRING);
     expect(fields[2].nullable).toBe(true);
-    expect(fields[2].indexParams.indexType).toBe(ZVecIndexType.INVERT);
+    expect(fields[2].indexParams!.indexType).toBe(ZVecIndexType.INVERT);
 
     expect(schema.vector('vector1').name).toBe('vector1');
     expect(schema.vector('vector1').dataType).toBe(ZVecDataType.VECTOR_FP32);
     expect(schema.vector('vector1').dimension).toBe(10);
-    expect(schema.vector('vector1').indexParams.indexType).toBe(ZVecIndexType.HNSW);
+    expect(schema.vector('vector1').indexParams!.indexType).toBe(ZVecIndexType.HNSW);
     expect(schema.vector('vector2').name).toBe('vector2');
     expect(schema.vector('vector2').dataType).toBe(ZVecDataType.VECTOR_FP16);
     expect(schema.vector('vector2').dimension).toBe(4);
-    expect(schema.vector('vector2').indexParams.indexType).toBe(ZVecIndexType.IVF);
+    expect(schema.vector('vector2').indexParams!.indexType).toBe(ZVecIndexType.IVF);
     expect(schema.vector('vector3').name).toBe('vector3');
     expect(schema.vector('vector3').dataType).toBe(ZVecDataType.SPARSE_VECTOR_FP32);
-    expect(schema.vector('vector3').indexParams.indexType).toBe(ZVecIndexType.HNSW);
+    expect(schema.vector('vector3').indexParams!.indexType).toBe(ZVecIndexType.HNSW);
 
     expect(schema.field('title').name).toBe('title');
     expect(schema.field('title').dataType).toBe(ZVecDataType.STRING);
     expect("indexParams" in schema.field('title')).toBe(false);
     expect(schema.field('price').name).toBe('price');
     expect(schema.field('price').dataType).toBe(ZVecDataType.INT32);
-    expect(schema.field('price').indexParams.indexType).toBe(ZVecIndexType.INVERT);
+    expect(schema.field('price').indexParams!.indexType).toBe(ZVecIndexType.INVERT);
     expect(schema.field('tag').name).toBe('tag');
     expect(schema.field('tag').dataType).toBe(ZVecDataType.ARRAY_STRING);
-    expect(schema.field('tag').indexParams.indexType).toBe(ZVecIndexType.INVERT);
+    expect(schema.field('tag').indexParams!.indexType).toBe(ZVecIndexType.INVERT);
+  });
+
+
+  const isLinuxX64 = process.platform === 'linux' && process.arch === 'x64';
+
+  (isLinuxX64 ? it : it.skip)('should parse HNSW-RaBitQ index params correctly', () => {
+    const schema = new ZVecCollectionSchema({
+      name: 'test_hnsw_rabitq',
+      vectors: [
+        {
+          name: 'vector1',
+          dataType: ZVecDataType.VECTOR_FP32,
+          dimension: 128,
+          indexParams: {
+            indexType: ZVecIndexType.HNSW_RABITQ,
+            metricType: ZVecMetricType.L2,
+            totalBits: 9,
+            numClusters: 100,
+            m: 19,
+            efConstruction: 200,
+            sampleCount: 30
+          }
+        },
+        {
+          name: 'vector2',
+          dataType: ZVecDataType.VECTOR_FP32,
+          dimension: 64,
+          indexParams: {
+            indexType: ZVecIndexType.HNSW_RABITQ,
+            metricType: ZVecMetricType.IP
+          }
+        }
+      ]
+    });
+
+    expect(schema).toBeInstanceOf(ZVecCollectionSchema);
+    expect(schema.name).toBe('test_hnsw_rabitq');
+
+    const vectors = schema.vectors();
+    expect(vectors.length).toBe(2);
+    expect(vectors[0].name).toBe('vector1');
+    expect(vectors[0].dataType).toBe(ZVecDataType.VECTOR_FP32);
+    expect(vectors[0].dimension).toBe(128);
+    expect(vectors[0].indexParams!.indexType).toBe(ZVecIndexType.HNSW_RABITQ);
+    expect(vectors[0].indexParams!.metricType).toBe(ZVecMetricType.L2);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).totalBits).toBe(9);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).numClusters).toBe(100);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).m).toBe(19);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).efConstruction).toBe(200);
+    expect((vectors[0].indexParams as ZVecHnswRabitqIndexParams).sampleCount).toBe(30);
+    expect(vectors[1].name).toBe('vector2');
+    expect(vectors[1].dataType).toBe(ZVecDataType.VECTOR_FP32);
+    expect(vectors[1].dimension).toBe(64);
+    expect(vectors[1].indexParams!.indexType).toBe(ZVecIndexType.HNSW_RABITQ);
+    expect(vectors[1].indexParams!.metricType).toBe(ZVecMetricType.IP);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).totalBits).toBe(7);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).numClusters).toBe(16);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).m).toBe(50);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).efConstruction).toBe(500);
+    expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).sampleCount).toBe(0);
   });
 });
