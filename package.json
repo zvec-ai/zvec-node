@@ -46,7 +46,8 @@
   "optionalDependencies": {
     "@zvec/bindings-darwin-arm64": "0.2.3",
     "@zvec/bindings-linux-arm64": "0.2.3",
-    "@zvec/bindings-linux-x64": "0.2.3"
+    "@zvec/bindings-linux-x64": "0.2.3",
+    "@zvec/bindings-win32-x64": "0.2.3"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
