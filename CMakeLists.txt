@@ -35,6 +35,7 @@ set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(is_multi_config)
     set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib/Release)
+    set(ZVEC_DEPENDENCY_LIB_DIR_MULTI_CONFIG ${ZVEC_DEPENDENCY_LIB_DIR}/Release)
 else()
     set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib)
 endif()
@@ -62,7 +63,7 @@ endif()
 include(ExternalProject)
 set(ZVEC_CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release)
 if(MSVC)
-    list(APPEND ZVEC_CMAKE_ARGS "-DCMAKE_C_FLAGS=/MP" "-DCMAKE_CXX_FLAGS=/MP")
+    list(APPEND ZVEC_CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF" -DCMAKE_C_FLAGS=/MP" "-DCMAKE_CXX_FLAGS=/MP")
 endif()
 ExternalProject_Add(zvec
     SOURCE_DIR ${ZVEC_SOURCE_DIR}
@@ -80,7 +81,7 @@ ExternalProject_Add(zvec
 
 # Add include and library search paths
 include_directories(${ZVEC_SOURCE_DIR}/src/include/)
-link_directories(${ZVEC_LIB_DIR} ${ZVEC_DEPENDENCY_LIB_DIR})
+link_directories(${ZVEC_LIB_DIR} ${ZVEC_DEPENDENCY_LIB_DIR} ${ZVEC_DEPENDENCY_LIB_DIR_MULTI_CONFIG})
 
 
 # --- Determine debug/release library names ---
@@ -90,7 +91,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(PROTOBUF_LIB protobufd)
 else()
     set(GLOG_LIB glog)
-    set(GFLAGS_LIB gflags_nothreads)
+    if(WIN32)
+        set(GFLAGS_LIB gflags_nothreads_static)
+    else()
+        set(GFLAGS_LIB gflags_nothreads)
+    endif()
     set(PROTOBUF_LIB protobuf)
 endif()
 
@@ -208,7 +213,7 @@ else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-# zvec_db: links libzvec_db.a + all deps
+# zvec-db: links libzvec_db.a + all deps
 add_library(zvec-db INTERFACE)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(zvec-db INTERFACE
