@@ -1,10 +1,5 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.26)
 project(zvec_node_binding)
-
-
-if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
-endif()
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,10 +7,56 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
+endif()
+
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+endif()
+
+
+# Parallelism for the external zvec build
+set(ZVEC_BUILD_JOBS "" CACHE STRING "Parallel build jobs for external zvec project")
+include(ProcessorCount)
+if(NOT ZVEC_BUILD_JOBS)
+    ProcessorCount(ZVEC_BUILD_JOBS)
+    if(NOT ZVEC_BUILD_JOBS OR ZVEC_BUILD_JOBS EQUAL 0)
+        set(ZVEC_BUILD_JOBS 6)
+    endif()
+endif()
+
+
+# Path variables
 set(ZVEC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/zvec)
 set(ZVEC_BINARY_DIR ${CMAKE_BINARY_DIR}/zvec-build)
-set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib)
-set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
+
+get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(is_multi_config)
+    set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib/Release)
+    set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib/Release)
+else()
+    set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib)
+    set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
+endif()
+
+
+# External build byproducts
+if(WIN32)
+    set(ZVEC_BYPRODUCTS
+        ${ZVEC_LIB_DIR}/zvec_ailego.lib
+        ${ZVEC_LIB_DIR}/zvec_core.lib
+        ${ZVEC_LIB_DIR}/zvec_turbo.lib
+        ${ZVEC_LIB_DIR}/zvec_db.lib
+    )
+else()
+    set(ZVEC_BYPRODUCTS
+        ${ZVEC_LIB_DIR}/libzvec_ailego.a
+        ${ZVEC_LIB_DIR}/libzvec_core.a
+        ${ZVEC_LIB_DIR}/libzvec_turbo.a
+        ${ZVEC_LIB_DIR}/libzvec_db.a
+    )
+endif()
 
 
 # External build of zvec
@@ -29,11 +70,13 @@ ExternalProject_Add(zvec
     BUILD_ALWAYS OFF
     TEST_COMMAND ""
     BUILD_BYPRODUCTS
-        ${ZVEC_LIB_DIR}/libzvec_ailego.a
-        ${ZVEC_LIB_DIR}/libzvec_core.a
-        ${ZVEC_LIB_DIR}/libzvec_db.a
+        ${ZVEC_BYPRODUCTS}
+    BUILD_COMMAND
+        ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --parallel ${ZVEC_BUILD_JOBS}
 )
 
+
+# Add include and library search paths
 include_directories(${ZVEC_SOURCE_DIR}/src/include/)
 link_directories(${ZVEC_LIB_DIR} ${ZVEC_DEPENDENCY_LIB_DIR})
 
@@ -52,42 +95,77 @@ endif()
 # --- Dependency groups ---
 find_package(Threads REQUIRED)
 
-set(zvec_ailego_deps
-    arrow
-    parquet
-    arrow_bundled_dependencies
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CMAKE_DL_LIBS}
-)
-
 set(zvec_core_deps
-    # empty
+    zvec_turbo
 )
 
-set(zvec_db_deps
-    roaring
-    rocksdb
-    arrow
-    arrow_acero
-    arrow_bundled_dependencies
-    arrow_compute
-    arrow_dataset
-    parquet
-    antlr4-runtime
-    ${GLOG_LIB}
-    ${GFLAGS_LIB}
-    ${PROTOBUF_LIB}
-    lz4
-)
+if (NOT WIN32)
+    set(zvec_ailego_deps
+        arrow
+        parquet
+        arrow_bundled_dependencies
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${CMAKE_DL_LIBS}
+    )
+    set(zvec_db_deps
+        roaring
+        rocksdb
+        arrow
+        arrow_acero
+        arrow_bundled_dependencies
+        arrow_compute
+        arrow_dataset
+        parquet
+        antlr4-runtime
+        ${GLOG_LIB}
+        ${GFLAGS_LIB}
+        ${PROTOBUF_LIB}
+        lz4
+    )
+else ()
+    set(PROTOBUF_LIB libprotobuf)
+    set(zvec_ailego_deps
+        arrow_static
+        parquet_static
+        arrow_bundled_dependencies
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${CMAKE_DL_LIBS}
+    )
+    set(zvec_db_deps
+        roaring
+        rocksdb
+        arrow_static
+        arrow_acero_static
+        arrow_bundled_dependencies
+        arrow_compute_static
+        arrow_dataset_static
+        parquet_static
+        antlr4-runtime-static
+        ${GLOG_LIB}
+        ${GFLAGS_LIB}
+        ${PROTOBUF_LIB}
+        lz4
+        rpcrt4
+        shlwapi
+    )
+endif ()
+
 
 # --- Create INTERFACE targets for Zvec components ---
 
 # zvec_ailego: links libzvec_ailego.a + its deps
 add_library(zvec-ailego INTERFACE)
-target_link_libraries(zvec-ailego INTERFACE
-    -lzvec_ailego
-    ${zvec_ailego_deps}
-)
+if(WIN32)
+    target_link_libraries(zvec-ailego INTERFACE
+        zvec_ailego
+        ${zvec_ailego_deps}
+    )
+else()
+    target_link_libraries(zvec-ailego INTERFACE
+        -lzvec_ailego
+        ${zvec_ailego_deps}
+    )
+endif()
 
 # zvec_core: links libzvec_core.a via special flags (handled externally), but declare logical deps
 add_library(zvec-core INTERFACE)
@@ -107,6 +185,23 @@ elseif(APPLE)
         zvec-ailego
         ${zvec_core_deps}
     )
+elseif(ANDROID)
+    target_link_libraries(zvec-core INTERFACE
+        -Wl,--whole-archive
+        zvec_core
+        -Wl,--no-whole-archive
+        -Wl,--start-group
+        zvec-ailego
+        ${zvec_core_deps}
+        -Wl,--end-group
+    )
+elseif(WIN32)
+    target_link_libraries(zvec-core INTERFACE
+        zvec_core
+        zvec-ailego
+        ${zvec_core_deps}
+    )
+    target_link_options(zvec-core INTERFACE "/WHOLEARCHIVE:zvec_core")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -129,6 +224,24 @@ elseif(APPLE)
         zvec-ailego
         ${zvec_db_deps}
     )
+elseif(ANDROID)
+    target_link_libraries(zvec-db INTERFACE
+        zvec_db
+        zvec-core
+        zvec-ailego
+        -Wl,--start-group
+        ${zvec_db_deps}
+        -Wl,--end-group
+    )
+elseif(WIN32)
+    target_link_libraries(zvec-db INTERFACE
+        zvec_db
+        zvec-core
+        zvec-ailego
+        ${zvec_db_deps}
+    )
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 
@@ -153,8 +266,13 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        ${CMAKE_JS_LIB}
-        zvec-db
+    ${CMAKE_JS_LIB}
+    zvec-db
+)
+
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE
+    NAPI_CPP_EXCEPTIONS
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -163,13 +281,14 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME "zvec_node_binding"
 )
 
+# Strip symbols to reduce executable size
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     if(APPLE)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_STRIP} -x "$<TARGET_FILE:${PROJECT_NAME}>"
             COMMENT "Stripping symbols (macOS)"
         )
-    else()
+    elseif(UNIX)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:${PROJECT_NAME}>"
             COMMENT "Stripping symbols (Linux)"

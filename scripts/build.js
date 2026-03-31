@@ -8,8 +8,11 @@ const path = require('path');
 
 
 // Build variables
+const IS_WINDOWS = process.platform === 'win32';
 const JOBS = os.cpus().length;
-const BUILD_TYPE = process.env.BUILD_TYPE || process.env.npm_config_build_type || 'Release';
+const BUILD_TYPE = process.argv.includes('--debug') ? 'Debug'
+  : process.argv.includes('--release') ? 'Release'
+    : process.env.BUILD_TYPE || process.env.npm_config_build_type || 'Release';
 
 
 // Path variables
@@ -24,7 +27,16 @@ console.log(`Building and packaging Zvec Node.js binding ...`);
 
 try {
   // Compile
-  const cmd = `cmake-js --prefer-make --parallel=${JOBS} compile --CD=CMAKE_BINARY_DIR=${BUILD_DIR} --CD=CMAKE_BUILD_TYPE=${BUILD_TYPE}`;
+  const cmdParts = ['cmake-js'];
+  if (!IS_WINDOWS) {
+    cmdParts.push('--prefer-make');
+  }
+  cmdParts.push(`--out=${BUILD_DIR}`);
+  cmdParts.push(`--parallel=${JOBS}`);
+  cmdParts.push('compile');
+  cmdParts.push(`--CD=CMAKE_BUILD_TYPE=${BUILD_TYPE}`);
+  const cmd = cmdParts.join(' ');
+
   console.log(`\nCompiling native addon. Jobs: ${JOBS}, Build type: ${BUILD_TYPE}.`);
   console.log(`Running command: ${cmd}\n`);
   execSync(cmd, { stdio: 'inherit', cwd: PACKAGE_ROOT });
