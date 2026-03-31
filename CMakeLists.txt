@@ -70,7 +70,7 @@ ExternalProject_Add(zvec
     BINARY_DIR ${ZVEC_BINARY_DIR}
     INSTALL_COMMAND "" # Skip installation
     CMAKE_ARGS ${ZVEC_CMAKE_ARGS}
-    BUILD_ALWAYS OFF
+    BUILD_ALWAYS ON
     TEST_COMMAND ""
     BUILD_BYPRODUCTS
         ${ZVEC_BYPRODUCTS}
