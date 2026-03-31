@@ -61,12 +61,15 @@ endif()
 
 # External build of zvec
 include(ExternalProject)
+set(ZVEC_CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release)
+if(MSVC)
+    list(APPEND ZVEC_CMAKE_ARGS "-DCMAKE_C_FLAGS=/MP" "-DCMAKE_CXX_FLAGS=/MP")
+endif()
 ExternalProject_Add(zvec
     SOURCE_DIR ${ZVEC_SOURCE_DIR}
     BINARY_DIR ${ZVEC_BINARY_DIR}
     INSTALL_COMMAND "" # Skip installation
-    CMAKE_ARGS
-        -DCMAKE_BUILD_TYPE=Release
+    CMAKE_ARGS ${ZVEC_CMAKE_ARGS}
     BUILD_ALWAYS OFF
     TEST_COMMAND ""
     BUILD_BYPRODUCTS
