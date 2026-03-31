@@ -30,14 +30,13 @@ endif()
 # Path variables
 set(ZVEC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/zvec)
 set(ZVEC_BINARY_DIR ${CMAKE_BINARY_DIR}/zvec-build)
+set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
 
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(is_multi_config)
     set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib/Release)
-    set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib/Release)
 else()
     set(ZVEC_LIB_DIR ${ZVEC_BINARY_DIR}/lib)
-    set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
 endif()
 
 
