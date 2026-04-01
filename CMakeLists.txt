@@ -61,9 +61,22 @@ endif()
 
 # External build of zvec
 include(ExternalProject)
+set(ZVEC_BUILD_TARGETS
+    --target zvec_ailego
+    --target zvec_core
+    --target zvec_turbo
+    --target zvec_db
+)
 set(ZVEC_CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release)
 if(MSVC)
-    list(APPEND ZVEC_CMAKE_ARGS "-DBUILD_SHARED_LIBS=OFF" "-DCMAKE_C_FLAGS=/MP" "-DCMAKE_CXX_FLAGS=/MP")
+    list(APPEND ZVEC_CMAKE_ARGS
+        "-DBUILD_SHARED_LIBS=OFF"
+        "-DCMAKE_C_FLAGS=/MP"
+        "-DCMAKE_CXX_FLAGS=/MP"
+        "-DBUILD_TOOLS=OFF"
+        "-DCMAKE_POLICY_DEFAULT_CMP0091=NEW"
+        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
+    )
 endif()
 ExternalProject_Add(zvec
     SOURCE_DIR ${ZVEC_SOURCE_DIR}
@@ -75,7 +88,7 @@ ExternalProject_Add(zvec
     BUILD_BYPRODUCTS
         ${ZVEC_BYPRODUCTS}
     BUILD_COMMAND
-        ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --parallel ${ZVEC_BUILD_JOBS}
+        ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --parallel ${ZVEC_BUILD_JOBS} ${ZVEC_BUILD_TARGETS}
 )
 
 
