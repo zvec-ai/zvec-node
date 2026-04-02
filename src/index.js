@@ -16,7 +16,8 @@ try {
 } catch (err) {
   throw new Error(
     `Zvec Error: Failed to load prebuilt binary for ${process.platform}-${process.arch}. ` +
-    `This platform may not be supported. `
+    `This platform may not be supported. ` +
+    `Original error: ${err.message}`
   );
 }
 
