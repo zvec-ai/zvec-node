@@ -19,7 +19,7 @@ jobs:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
-
+          - windows-latest
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -40,9 +40,16 @@ jobs:
       - name: Patch Test Imports
         run: node scripts/patch-imports.js tests @zvec/zvec
 
-      - name: Install Latest Zvec
+      - name: Install Latest Zvec (Unix)
+        if: runner.os != 'Windows'
         run: |
           rm -rf node_modules/@zvec
+          npm install @zvec/zvec@latest
+
+      - name: Install Latest Zvec (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Remove-Item -Recurse -Force node_modules\@zvec -ErrorAction SilentlyContinue
           npm install @zvec/zvec@latest
 
       - name: Verify Installed Version
