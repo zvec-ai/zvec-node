@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
+cmake_policy(SET CMP0077 NEW)
 project(zvec_node_binding)
 
 
@@ -104,11 +105,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(PROTOBUF_LIB protobufd)
 else()
     set(GLOG_LIB glog)
-    if(WIN32)
-        set(GFLAGS_LIB gflags_nothreads_static)
-    else()
-        set(GFLAGS_LIB gflags_nothreads)
-    endif()
+    set(GFLAGS_LIB gflags_nothreads)
     set(PROTOBUF_LIB protobuf)
 endif()
 
