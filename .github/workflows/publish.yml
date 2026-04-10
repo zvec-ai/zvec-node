@@ -31,13 +31,10 @@ jobs:
           node-version: "22.x"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install CMake 3.27
+      - name: Install Dependencies
         run: |
           curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz | tar xz -C /usr/local --strip-components=1
-          cmake --version
-
-      - name: Install Dependencies
-        run: npm install --ignore-scripts
+          npm install --ignore-scripts
 
       - name: Build Bindings
         run: npm run build
