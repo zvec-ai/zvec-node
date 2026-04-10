@@ -33,8 +33,7 @@ jobs:
 
       - name: Install CMake 3.27
         run: |
-          pip3 install cmake==3.27.*
-
+          curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz | tar xz -C /usr/local --strip-components=1
           cmake --version
 
       - name: Install Dependencies
