@@ -16,7 +16,7 @@ A Node.js binding for [Zvec](https://github.com/alibaba/zvec) —— a lightweig
 - **Hybrid Search**: Combine semantic similarity with structured filters for precise results.
 - **Runs Anywhere**: As an in-process library, Zvec runs wherever your code runs — notebooks, servers, CLI tools, or even edge devices.
 
-## Installation
+## 📦 Installation
 
 Install the package using npm:
 
@@ -24,10 +24,11 @@ Install the package using npm:
 npm install @zvec/zvec
 ```
 
-### Supported Platforms
+### 🖥️ Supported Platforms
 
-- Linux (x86_64/ARM64)
-- macOS (ARM64)
+- 🐧 Linux (x86_64/ARM64)
+- 🍎 macOS (ARM64)
+- 🪟 Windows (x86_64)
 
 ### 🛠️ Building from Source
 

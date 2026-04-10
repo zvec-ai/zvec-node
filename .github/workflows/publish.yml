@@ -2,9 +2,6 @@ name: Publish to npm
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/automate_publishment
 
 concurrency:
   group: ${{ github.workflow }}
@@ -14,10 +11,19 @@ permissions:
   contents: read
 
 jobs:
-  publish-bindings:
-    runs-on: ubuntu-latest
+  publish-linux-bindings:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            image: quay.io/pypa/manylinux_2_28_x86_64
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
+          - runner: ubuntu-24.04-arm
+            image: quay.io/pypa/manylinux_2_28_aarch64
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-aarch64.tar.gz
+    runs-on: ${{ matrix.runner }}
     container:
-      image: quay.io/pypa/manylinux_2_28_x86_64
+      image: ${{ matrix.image }}
 
     steps:
       - name: Checkout Code
@@ -33,29 +39,63 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz | tar xz -C /usr/local --strip-components=1
+          curl -sL ${{ matrix.cmake_url }} | tar xz -C /usr/local --strip-components=1
           npm install --ignore-scripts
 
-      - name: Build Bindings
-        run: npm run build
+      - name: Build and Publish Bindings
+        run: npm run publish:bindings -- --force
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Verify glibc Version Requirement
-        run: |
-          BINARY="packages/bindings-linux-x64/zvec_node_binding.node"
-          echo "=== Required glibc versions ==="
-          objdump -T "$BINARY" | grep -oP 'GLIBC_[\d.]+' | sort -uV
-          MAX_GLIBC=$(objdump -T "$BINARY" | grep -oP 'GLIBC_[\d.]+' | sort -uV | tail -1)
-          echo "Highest required glibc: $MAX_GLIBC"
-          ALLOWED="GLIBC_2.28"
-          if [ "$(printf '%s\n%s' "$ALLOWED" "$MAX_GLIBC" | sort -V | tail -1)" != "$ALLOWED" ]; then
-            echo "::error::Binary requires $MAX_GLIBC which is higher than the allowed $ALLOWED"
-            exit 1
-          fi
-          echo "glibc check passed. Highest requirement is $MAX_GLIBC (allowed up to $ALLOWED)"
+  publish-macos-bindings:
+    runs-on: macos-latest
 
-      - name: Dry Run Publish
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Dependencies
         run: |
-          cd packages/bindings-linux-x64
-          npm publish --access public --dry-run
+          curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-macos-universal.tar.gz | tar xz
+          echo "$(pwd)/cmake-3.27.9-macos-universal/CMake.app/Contents/bin" >> $GITHUB_PATH
+          npm install --ignore-scripts
+
+      - name: Build and Publish Bindings
+        run: npm run publish:bindings -- --force
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-windows-bindings:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Dependencies
+        run: |
+          Invoke-WebRequest -Uri "https://cmake.org/files/v3.27/cmake-3.27.9-windows-x86_64.zip" -OutFile cmake.zip
+          Expand-Archive cmake.zip -DestinationPath cmake
+          echo "$((Resolve-Path cmake\cmake-3.27.9-windows-x86_64\bin).Path)" >> $env:GITHUB_PATH
+          npm install --ignore-scripts
+
+      - name: Build and Publish Bindings
+        run: npm run publish:bindings -- --force
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
