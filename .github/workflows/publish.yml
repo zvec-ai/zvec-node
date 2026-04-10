@@ -34,6 +34,7 @@ jobs:
       - name: Install CMake 3.27
         run: |
           pip3 install cmake==3.27.*
+
           cmake --version
 
       - name: Install Dependencies
