@@ -7,7 +7,7 @@ const { execSync } = require("child_process");
 const type = process.argv[2];
 
 if (!["patch", "minor", "major"].includes(type)) {
-  console.error("Usage: npm run version <patch|minor|major>");
+  console.error("Usage: npm run bump:bindings <patch|minor|major>");
   process.exit(1);
 }
 
@@ -30,21 +30,14 @@ for (const dir of dirs) {
   });
 }
 
-console.log(`\nBumping main (${type})`);
+// Read the new version from any binding package
+const firstDir = dirs.find(dir => fs.existsSync(path.join(packagesDir, dir, "package.json")));
+const newVersion = JSON.parse(fs.readFileSync(path.join(packagesDir, firstDir, "package.json"), "utf8")).version;
 
-execSync(`npm version ${type} --no-git-tag-version`, {
-  cwd: root,
-  stdio: "inherit",
-});
-
-// Read the new version from root package.json
-const rootPkgJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const newVersion = rootPkgJson.version;
-
-console.log("\n✅ Version bump completed");
+console.log("\n✅ Bindings version bump completed");
 console.log("\n📝 Next steps:");
 console.log("   1. git add .");
-console.log(`   2. git commit -m 'chore(release): bump version to v${newVersion} [skip ci]'`);
-console.log("      ⚠️  IMPORTANT: Include [skip ci] to skip GitHub Actions");
-console.log(`   3. git tag v${newVersion}`);
-console.log("   4. git push && git push --tags");
+console.log(`   2. git commit -m 'chore(release): bump bindings to v${newVersion} [skip ci]'`);
+console.log("   3. git push");
+console.log("   4. Trigger the 'Publish to npm' workflow on GitHub Actions");
+console.log(`   5. After bindings are published, run: npm run bump:main <patch|minor|major>`);
