@@ -19,11 +19,10 @@ permissions:
 jobs:
   test-source:
     runs-on: ubuntu-latest
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64
 
     steps:
-      - name: Check CPU Info
-        run: lscpu
-
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -32,10 +31,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: "22.x"
 
       - name: Install Dependencies
-        run: npm install
+        run: |
+          curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz | tar xz -C /usr/local --strip-components=1
+          npm install --ignore-scripts
 
       - name: Build Binaries
         run: npm run dev
