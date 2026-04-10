@@ -96,15 +96,35 @@ You can install this generated package directly in any Node.js project:
 npm install ./zvec-zvec-<version>.tgz
 ```
 
-## Publishing Binaries
+## Releasing
 
-Build the binary for the current platform and publish it:
+### 1. Bump Binding Versions
+
+```bash
+npm run bump:bindings -- <patch|minor|major>
+```
+
+This bumps the version in every `packages/bindings-*/package.json`. Commit and push the change.
+
+### 2. Publish Bindings
+
+Trigger the **Publish to npm** workflow on GitHub Actions (`workflow_dispatch`). This builds and publishes all platform-specific binding packages.
+
+Alternatively, you can publish the binding for the current platform manually:
 
 ```bash
 npm run publish:bindings
 ```
 
-Publish the main wrapper package (which contains the logic to download the correct platform-specific binary):
+### 3. Bump Main Package Version
+
+```bash
+npm run bump:main -- <patch|minor|major>
+```
+
+This syncs `optionalDependencies` in the root `package.json` to match the current binding versions, then bumps the main package version. Commit, tag, and push.
+
+### 4. Publish Main Package
 
 ```bash
 npm run publish:main
