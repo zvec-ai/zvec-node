@@ -1,0 +1,56 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish-bindings:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Dependencies
+        run: npm install --ignore-scripts
+
+      - name: Build Bindings
+        run: npm run build
+
+      - name: Verify glibc Version Requirement
+        run: |
+          BINARY="packages/bindings-linux-x64/zvec_node_binding.node"
+          echo "=== Required glibc versions ==="
+          objdump -T "$BINARY" | grep -oP 'GLIBC_[\d.]+' | sort -uV
+          MAX_GLIBC=$(objdump -T "$BINARY" | grep -oP 'GLIBC_[\d.]+' | sort -uV | tail -1)
+          echo "Highest required glibc: $MAX_GLIBC"
+          ALLOWED="GLIBC_2.28"
+          if [ "$(printf '%s\n%s' "$ALLOWED" "$MAX_GLIBC" | sort -V | tail -1)" != "$ALLOWED" ]; then
+            echo "::error::Binary requires $MAX_GLIBC which is higher than the allowed $ALLOWED"
+            exit 1
+          fi
+          echo "glibc check passed. Highest requirement is $MAX_GLIBC (allowed up to $ALLOWED)"
+
+      - name: Dry Run Publish
+        run: |
+          cd packages/bindings-linux-x64
+          npm publish --access public --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
