@@ -46,8 +46,9 @@ const newVersion = JSON.parse(fs.readFileSync(rootPkgPath, "utf8")).version;
 
 console.log("\n✅ Main package version bump completed");
 console.log("\n📝 Next steps:");
-console.log("   1. git add .");
-console.log(`   2. git commit -m 'chore(release): bump main to v${newVersion}'`);
-console.log(`   3. git tag v${newVersion}`);
-console.log("   4. git push && git push --tags");
-console.log("   5. npm run publish:main");
+console.log("   1. npm install --ignore-scripts");
+console.log("   2. git add .");
+console.log(`   3. git commit -m 'chore(release): bump main to v${newVersion}'`);
+console.log(`   4. git tag v${newVersion}`);
+console.log("   5. git push && git push --tags");
+console.log("   6. npm run publish:main");
