@@ -2,6 +2,9 @@ name: Publish to npm
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/automate_publishment
 
 concurrency:
   group: ${{ github.workflow }}
