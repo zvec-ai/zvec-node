@@ -125,7 +125,7 @@ Napi::Object OpenCollection(const Napi::CallbackInfo &info) {
     }
   }
 
-  auto collection = zvec::Collection::Open(path, zvec::CollectionOptions{});
+  auto collection = zvec::Collection::Open(path, options);
   if (collection) {
     Napi::Object obj = constructors->collectionConstructor.New(
         {Napi::External<void>::New(env, kInternalConstructionMarker)});
