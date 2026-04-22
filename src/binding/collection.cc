@@ -657,7 +657,7 @@ Napi::Value Collection::Destroy(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::AddColumn(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() != 1 && !info[0].IsObject()) {
+  if (info.Length() != 1 || !info[0].IsObject()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.addColumn(): Expected exactly 1 "
                           "argument. Argument must be an object."));
@@ -716,7 +716,7 @@ Napi::Value Collection::AddColumn(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::DropColumn(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() != 1 && !info[0].IsString()) {
+  if (info.Length() != 1 || !info[0].IsString()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.dropColumn(): Expected exactly 1 "
                           "argument. Argument must be a string."));
@@ -732,7 +732,7 @@ Napi::Value Collection::DropColumn(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::AlterColumn(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() != 1 && !info[0].IsObject()) {
+  if (info.Length() != 1 || !info[0].IsObject()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.alterColumn(): Expected exactly 1 "
                           "argument. Argument must be an object."));
@@ -817,7 +817,7 @@ Napi::Value Collection::AlterColumn(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::CreateIndex(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() != 1 && !info[0].IsObject()) {
+  if (info.Length() != 1 || !info[0].IsObject()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.createIndex(): Expected exactly 1 "
                           "argument. Argument must be an object."));
@@ -880,7 +880,7 @@ Napi::Value Collection::CreateIndex(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::DropIndex(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
-  if (info.Length() != 1 && !info[0].IsString()) {
+  if (info.Length() != 1 || !info[0].IsString()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.dropIndex(): Expected exactly 1 "
                           "argument. Argument must be a string."));
