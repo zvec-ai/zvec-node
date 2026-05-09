@@ -1,6 +1,6 @@
 {
   "name": "@zvec/zvec",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "A lightweight, lightning-fast, in-process vector database",
   "keywords": [
     "vector database",
@@ -60,10 +60,10 @@
     "test:unit": "jest"
   },
   "optionalDependencies": {
-    "@zvec/bindings-darwin-arm64": "0.3.2",
-    "@zvec/bindings-linux-arm64": "0.3.2",
-    "@zvec/bindings-linux-x64": "0.3.2",
-    "@zvec/bindings-win32-x64": "0.3.2"
+    "@zvec/bindings-darwin-arm64": "0.4.0",
+    "@zvec/bindings-linux-arm64": "0.4.0",
+    "@zvec/bindings-linux-x64": "0.4.0",
+    "@zvec/bindings-win32-x64": "0.4.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
