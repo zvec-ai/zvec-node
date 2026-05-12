@@ -268,6 +268,7 @@ endif()
 
 # --- The main target library ---
 add_library(${PROJECT_NAME} SHARED
+    ${CMAKE_JS_SRC}
     src/binding/addon.cc
     src/binding/collection.cc
     src/binding/config.cc
