@@ -53,11 +53,15 @@ class Collection : public Napi::ObjectWrap<Collection> {
 
   Napi::Value DeleteByFilter(const Napi::CallbackInfo &info);
 
+  Napi::Value DeleteByFilterAsync(const Napi::CallbackInfo &info);
+
   Napi::Value Query(const Napi::CallbackInfo &info);
 
   Napi::Value Fetch(const Napi::CallbackInfo &info);
 
   Napi::Value Optimize(const Napi::CallbackInfo &info);
+
+  Napi::Value OptimizeAsync(const Napi::CallbackInfo &info);
 
   Napi::Value Close(const Napi::CallbackInfo &info);
 

@@ -1,4 +1,5 @@
 #include "collection.h"
+#include "async_workers.h"
 #include "doc.h"
 #include "params.h"
 #include "schema.h"
@@ -153,9 +154,11 @@ Napi::Object Collection::Init(Napi::Env env, Napi::Object exports,
           InstanceMethod("updateSync", &Collection::Update),
           InstanceMethod("deleteSync", &Collection::Delete),
           InstanceMethod("deleteByFilterSync", &Collection::DeleteByFilter),
+          InstanceMethod("deleteByFilter", &Collection::DeleteByFilterAsync),
           InstanceMethod("_internalQuery", &Collection::Query),
           InstanceMethod("fetchSync", &Collection::Fetch),
           InstanceMethod("optimizeSync", &Collection::Optimize),
+          InstanceMethod("optimize", &Collection::OptimizeAsync),
           InstanceMethod("closeSync", &Collection::Close),
           InstanceMethod("destroySync", &Collection::Destroy),
           InstanceMethod("addColumnSync", &Collection::AddColumn),
@@ -516,6 +519,24 @@ Napi::Value Collection::DeleteByFilter(const Napi::CallbackInfo &info) {
 }
 
 
+Napi::Value Collection::DeleteByFilterAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() != 1 || !info[0].IsString()) {
+    ThrowIfNotOk(
+        env, zvec::Status::InvalidArgument(
+                 "Collection.deleteByFilter(): Expected exactly 1 argument. "
+                 "Argument must be a string"));
+    return env.Undefined();
+  }
+  std::string filter = info[0].As<Napi::String>().Utf8Value();
+  auto deferred = Napi::Promise::Deferred::New(env);
+  auto *worker =
+      new DeleteByFilterWorker(env, collection_, std::move(filter), deferred);
+  worker->Queue();
+  return deferred.Promise();
+}
+
+
 Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (info.Length() != 1) {
@@ -627,6 +648,37 @@ Napi::Value Collection::Optimize(const Napi::CallbackInfo &info) {
   }
   ThrowIfNotOk(env, collection_->Optimize(options));
   return env.Undefined();
+}
+
+
+Napi::Value Collection::OptimizeAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() > 1) {
+    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                          "Collection.optimize(): Expected 0 to 1 argument. "
+                          "Argument must be an OptimizeOptions object."));
+    return env.Undefined();
+  }
+  auto options{zvec::OptimizeOptions{}};
+  if (info.Length() == 1) {
+    if (!info[0].IsObject()) {
+      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                            "Collection.optimize(): Expected 0 to 1 argument. "
+                            "Argument must be an OptimizeOptions object."));
+      return env.Undefined();
+    }
+    auto parsed_options = ParseOptimizeOptions(info[0].As<Napi::Object>());
+    if (parsed_options) {
+      options = parsed_options.value();
+    } else {
+      ThrowIfNotOk(env, parsed_options.error());
+      return env.Undefined();
+    }
+  }
+  auto deferred = Napi::Promise::Deferred::New(env);
+  auto *worker = new OptimizeWorker(env, collection_, options, deferred);
+  worker->Queue();
+  return deferred.Promise();
 }
 
 
