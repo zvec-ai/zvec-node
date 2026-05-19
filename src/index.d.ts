@@ -917,11 +917,18 @@ export declare class ZVecCollection {
   deleteByFilter(filter: string): Promise<ZVecStatus>;
 
   /**
-   * Performs a vector similarity search query.
+   * Performs a search query against the collection.
    * @param params - The query parameters.
-   * @returns An array of documents ranked by similarity to the query vector.
+   * @returns An array of documents matching the query.
    */
   querySync(params: ZVecQuery): ZVecDoc[];
+
+  /**
+   * Asynchronously performs a search query against the collection.
+   * @param params - The query parameters.
+   * @returns A promise that resolves with an array of documents matching the query.
+   */
+  query(params: ZVecQuery): Promise<ZVecDoc[]>;
 
   /**
    * Fetches documents by their IDs.

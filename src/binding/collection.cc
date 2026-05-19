@@ -156,6 +156,7 @@ Napi::Object Collection::Init(Napi::Env env, Napi::Object exports,
           InstanceMethod("deleteByFilterSync", &Collection::DeleteByFilter),
           InstanceMethod("deleteByFilter", &Collection::DeleteByFilterAsync),
           InstanceMethod("_internalQuery", &Collection::Query),
+          InstanceMethod("_internalQueryAsync", &Collection::QueryAsync),
           InstanceMethod("fetchSync", &Collection::Fetch),
           InstanceMethod("optimizeSync", &Collection::Optimize),
           InstanceMethod("optimize", &Collection::OptimizeAsync),
@@ -542,7 +543,7 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
   if (info.Length() != 1) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.query(): Expected exactly 1 argument. "
-                          "Argument must be an Query object"));
+                          "Argument must be a Query object"));
     return env.Undefined();
   }
 
@@ -560,6 +561,29 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
       ThrowIfNotOk(env, res.error());
       return env.Undefined();
     }
+  } else {
+    ThrowIfNotOk(env, parsed_query.error());
+    return env.Undefined();
+  }
+}
+
+
+Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() != 1) {
+    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                          "Collection.query(): Expected exactly 1 argument. "
+                          "Argument must be a Query object"));
+    return env.Undefined();
+  }
+
+  if (auto parsed_query = ParseVectorQuery(info[0], get_wrapped_schema());
+      parsed_query) {
+    auto deferred = Napi::Promise::Deferred::New(env);
+    auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
+                                   std::move(parsed_query.value()), deferred);
+    worker->Queue();
+    return deferred.Promise();
   } else {
     ThrowIfNotOk(env, parsed_query.error());
     return env.Undefined();
