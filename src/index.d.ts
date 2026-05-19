@@ -1034,3 +1034,19 @@ export function ZVecOpen(
   path: string,
   options?: ZVecCollectionOptions
 ): ZVecCollection;
+
+
+declare const _default: {
+  ZVecDataType: typeof ZVecDataType;
+  ZVecIndexType: typeof ZVecIndexType;
+  ZVecMetricType: typeof ZVecMetricType;
+  ZVecQuantizeType: typeof ZVecQuantizeType;
+  ZVecLogType: typeof ZVecLogType;
+  ZVecLogLevel: typeof ZVecLogLevel;
+  ZVecCollectionSchema: typeof ZVecCollectionSchema;
+  ZVecInitialize: typeof ZVecInitialize;
+  ZVecCreateAndOpen: typeof ZVecCreateAndOpen;
+  ZVecOpen: typeof ZVecOpen;
+  isZVecError: typeof isZVecError;
+};
+export default _default;

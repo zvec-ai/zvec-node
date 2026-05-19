@@ -36,3 +36,18 @@ export type {
   ZVecVectorSchema
 } from './index.js';
 
+declare const _default: {
+  ZVecDataType: typeof import('./index.js').ZVecDataType;
+  ZVecIndexType: typeof import('./index.js').ZVecIndexType;
+  ZVecMetricType: typeof import('./index.js').ZVecMetricType;
+  ZVecQuantizeType: typeof import('./index.js').ZVecQuantizeType;
+  ZVecLogType: typeof import('./index.js').ZVecLogType;
+  ZVecLogLevel: typeof import('./index.js').ZVecLogLevel;
+  ZVecCollectionSchema: typeof import('./index.js').ZVecCollectionSchema;
+  ZVecInitialize: typeof import('./index.js').ZVecInitialize;
+  ZVecCreateAndOpen: typeof import('./index.js').ZVecCreateAndOpen;
+  ZVecOpen: typeof import('./index.js').ZVecOpen;
+  isZVecError: typeof import('./index.js').isZVecError;
+};
+export default _default;
+

@@ -14,3 +14,5 @@ export const ZVecInitialize = cjs.ZVecInitialize;
 export const ZVecCreateAndOpen = cjs.ZVecCreateAndOpen;
 export const ZVecOpen = cjs.ZVecOpen;
 export const isZVecError = cjs.isZVecError;
+
+export default cjs;
