@@ -2,8 +2,6 @@
 
 
 #include <napi.h>
-#include <mutex>
-#include <shared_mutex>
 #include "zvec/db/collection.h"
 #include "addon.h"
 
@@ -80,10 +78,10 @@ class Collection : public Napi::ObjectWrap<Collection> {
   Napi::Value DropIndex(const Napi::CallbackInfo &info);
 
 
+  bool ThrowIfClosed(Napi::Env &env);
+
   zvec::Collection::Ptr collection_{nullptr};
   zvec::CollectionSchema::Ptr schema_{nullptr};
-  mutable std::shared_mutex schema_lock_;
-  mutable std::mutex ddl_lock_{};
 };
 
 
