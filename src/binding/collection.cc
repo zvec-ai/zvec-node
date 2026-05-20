@@ -542,15 +542,17 @@ Napi::Value Collection::DeleteByFilter(const Napi::CallbackInfo &info) {
 Napi::Value Collection::DeleteByFilterAsync(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
   if (info.Length() != 1 || !info[0].IsString()) {
-    ThrowIfNotOk(
-        env, zvec::Status::InvalidArgument(
-                 "Collection.deleteByFilter(): Expected exactly 1 argument. "
-                 "Argument must be a string"));
-    return env.Undefined();
+    RejectIfNotOk(
+        env,
+        zvec::Status::InvalidArgument(
+            "Collection.deleteByFilter(): Expected exactly 1 argument. "
+            "Argument must be a string"),
+        deferred);
+    return deferred.Promise();
   }
   std::string filter = info[0].As<Napi::String>().Utf8Value();
-  auto deferred = Napi::Promise::Deferred::New(env);
   auto *worker =
       new DeleteByFilterWorker(env, collection_, std::move(filter), deferred);
   worker->Queue();
@@ -592,23 +594,25 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
 Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
   if (info.Length() != 1) {
-    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                          "Collection.query(): Expected exactly 1 argument. "
-                          "Argument must be a Query object"));
-    return env.Undefined();
+    RejectIfNotOk(env,
+                  zvec::Status::InvalidArgument(
+                      "Collection.query(): Expected exactly 1 argument. "
+                      "Argument must be a Query object"),
+                  deferred);
+    return deferred.Promise();
   }
 
   if (auto parsed_query = ParseVectorQuery(info[0], get_wrapped_schema());
       parsed_query) {
-    auto deferred = Napi::Promise::Deferred::New(env);
     auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
                                    std::move(parsed_query.value()), deferred);
     worker->Queue();
     return deferred.Promise();
   } else {
-    ThrowIfNotOk(env, parsed_query.error());
-    return env.Undefined();
+    RejectIfNotOk(env, parsed_query.error(), deferred);
+    return deferred.Promise();
   }
 }
 
@@ -702,29 +706,33 @@ Napi::Value Collection::Optimize(const Napi::CallbackInfo &info) {
 Napi::Value Collection::OptimizeAsync(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
   if (info.Length() > 1) {
-    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                          "Collection.optimize(): Expected 0 to 1 argument. "
-                          "Argument must be an OptimizeOptions object."));
-    return env.Undefined();
+    RejectIfNotOk(env,
+                  zvec::Status::InvalidArgument(
+                      "Collection.optimize(): Expected 0 to 1 argument. "
+                      "Argument must be an OptimizeOptions object."),
+                  deferred);
+    return deferred.Promise();
   }
   auto options{zvec::OptimizeOptions{}};
   if (info.Length() == 1) {
     if (!info[0].IsObject()) {
-      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                            "Collection.optimize(): Expected 0 to 1 argument. "
-                            "Argument must be an OptimizeOptions object."));
-      return env.Undefined();
+      RejectIfNotOk(env,
+                    zvec::Status::InvalidArgument(
+                        "Collection.optimize(): Expected 0 to 1 argument. "
+                        "Argument must be an OptimizeOptions object."),
+                    deferred);
+      return deferred.Promise();
     }
     auto parsed_options = ParseOptimizeOptions(info[0].As<Napi::Object>());
     if (parsed_options) {
       options = parsed_options.value();
     } else {
-      ThrowIfNotOk(env, parsed_options.error());
-      return env.Undefined();
+      RejectIfNotOk(env, parsed_options.error(), deferred);
+      return deferred.Promise();
     }
   }
-  auto deferred = Napi::Promise::Deferred::New(env);
   auto *worker = new OptimizeWorker(env, collection_, options, deferred);
   worker->Queue();
   return deferred.Promise();

@@ -49,7 +49,11 @@ binding.Collection.prototype.querySync = function (queryObj) {
 };
 
 binding.Collection.prototype.query = function (queryObj) {
-  validateQueryArg('query', queryObj, arguments.length);
+  try {
+    validateQueryArg('query', queryObj, arguments.length);
+  } catch (err) {
+    return Promise.reject(err);
+  }
   return this._internalQueryAsync(queryObj);
 };
 
