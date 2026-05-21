@@ -2,6 +2,7 @@
   "preset": "ts-jest",
   "testEnvironment": "node",
   "testMatch": [
-    "<rootDir>/tests/*.test.ts"
+    "<rootDir>/tests/*.test.ts",
+    "<rootDir>/tests/**/*.test.ts"
   ]
 }
