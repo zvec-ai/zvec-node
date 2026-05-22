@@ -51,8 +51,8 @@ describe('Data Operations Pipeline', () => {
 
 
   describe('optimize', () => {
-    it('should reach full index completeness', async () => {
-      await collection.optimize();
+    it('should reach full index completeness', () => {
+      collection.optimizeSync();
       expect(collection.stats.indexCompleteness['dense']).toBeCloseTo(1);
       expect(collection.stats.indexCompleteness['sparse']).toBeCloseTo(1);
     });
@@ -61,9 +61,9 @@ describe('Data Operations Pipeline', () => {
       verifyDocs(collection, 1, 1000, 1, 1);
     });
 
-    it('should return correct results from async query', async () => {
+    it('should return correct results from vector query', () => {
       const doc = makeDoc(42, 1, 1);
-      const results = await collection.query({
+      const results = collection.querySync({
         fieldName: 'dense', vector: doc.vectors!.dense, topk: 1, includeVector: true
       });
       expectDoc(results[0], 42, 1, 1);
