@@ -22,15 +22,15 @@ try {
 }
 
 
-binding.Collection.prototype.querySync = function (queryObj) {
-  if (arguments.length !== 1) {
-    const err = new Error("Collection.querySync(): Expected exactly 1 argument. Argument must be an Query object");
+function validateQueryArg(methodName, queryObj, argCount) {
+  if (argCount !== 1) {
+    const err = new Error(`Collection.${methodName}(): Expected exactly 1 argument. Argument must be an Query object`);
     err.name = "InvalidArgumentError";
     err.code = "ZVEC_INVALID_ARGUMENT";
     throw err;
   }
   if (queryObj === null || typeof queryObj !== 'object') {
-    const err = new Error("Collection.querySync(): Expected exactly 1 argument. Argument must be an Query object");
+    const err = new Error(`Collection.${methodName}(): Expected exactly 1 argument. Argument must be an Query object`);
     err.name = "InvalidArgumentError";
     err.code = "ZVEC_INVALID_ARGUMENT";
     throw err;
@@ -40,9 +40,21 @@ binding.Collection.prototype.querySync = function (queryObj) {
     err.name = "NotSupportedError";
     err.code = "ZVEC_NOT_SUPPORTED";
     throw err;
-  } else {
-    return this._internalQuery(queryObj);
   }
+}
+
+binding.Collection.prototype.querySync = function (queryObj) {
+  validateQueryArg('querySync', queryObj, arguments.length);
+  return this._internalQuery(queryObj);
+};
+
+binding.Collection.prototype.query = function (queryObj) {
+  try {
+    validateQueryArg('query', queryObj, arguments.length);
+  } catch (err) {
+    return Promise.reject(err);
+  }
+  return this._internalQueryAsync(queryObj);
 };
 
 

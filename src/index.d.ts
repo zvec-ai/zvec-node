@@ -910,11 +910,25 @@ export declare class ZVecCollection {
   deleteByFilterSync(filter: string): ZVecStatus;
 
   /**
-   * Performs a vector similarity search query.
+   * Asynchronously deletes documents based on a filter expression.
+   * @param filter - A string representing the filter expression.
+   * @returns A promise that resolves with the status of the operation.
+   */
+  deleteByFilter(filter: string): Promise<ZVecStatus>;
+
+  /**
+   * Performs a search query against the collection.
    * @param params - The query parameters.
-   * @returns An array of documents ranked by similarity to the query vector.
+   * @returns An array of documents matching the query.
    */
   querySync(params: ZVecQuery): ZVecDoc[];
+
+  /**
+   * Asynchronously performs a search query against the collection.
+   * @param params - The query parameters.
+   * @returns A promise that resolves with an array of documents matching the query.
+   */
+  query(params: ZVecQuery): Promise<ZVecDoc[]>;
 
   /**
    * Fetches documents by their IDs.
@@ -929,6 +943,14 @@ export declare class ZVecCollection {
    * @throws {Error} If the operation fails.
    */
   optimizeSync(options?: ZVecOptimizeOptions): void;
+
+  /**
+   * Asynchronously optimizes the collection's internal structures for better performance.
+   * @param options - Optional parameters for the operation.
+   * @returns A promise that resolves when optimization is complete.
+   * @rejects {ZVecError} If the operation fails.
+   */
+  optimize(options?: ZVecOptimizeOptions): Promise<void>;
 
   /**
    * Closes the collection and releases its resources.

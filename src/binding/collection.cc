@@ -1,4 +1,5 @@
 #include "collection.h"
+#include "async_workers.h"
 #include "doc.h"
 #include "params.h"
 #include "schema.h"
@@ -153,9 +154,12 @@ Napi::Object Collection::Init(Napi::Env env, Napi::Object exports,
           InstanceMethod("updateSync", &Collection::Update),
           InstanceMethod("deleteSync", &Collection::Delete),
           InstanceMethod("deleteByFilterSync", &Collection::DeleteByFilter),
+          InstanceMethod("deleteByFilter", &Collection::DeleteByFilterAsync),
           InstanceMethod("_internalQuery", &Collection::Query),
+          InstanceMethod("_internalQueryAsync", &Collection::QueryAsync),
           InstanceMethod("fetchSync", &Collection::Fetch),
           InstanceMethod("optimizeSync", &Collection::Optimize),
+          InstanceMethod("optimize", &Collection::OptimizeAsync),
           InstanceMethod("closeSync", &Collection::Close),
           InstanceMethod("destroySync", &Collection::Destroy),
           InstanceMethod("addColumnSync", &Collection::AddColumn),
@@ -195,7 +199,6 @@ zvec::Collection::Ptr Collection::get_wrapped_collection() {
 
 
 zvec::CollectionSchema::Ptr Collection::get_wrapped_schema() {
-  std::shared_lock<std::shared_mutex> lock(schema_lock_);
   return schema_;
 }
 
@@ -212,7 +215,6 @@ void Collection::set_wrapped_collection(zvec::Collection::Ptr collection) {
 
 
 void Collection::set_wrapped_schema(Napi::Env &env) {
-  std::unique_lock<std::shared_mutex> lock(schema_lock_);
   if (auto schema = collection_->Schema(); schema) {
     schema_ = std::make_shared<zvec::CollectionSchema>(schema.value());
   } else {
@@ -221,18 +223,32 @@ void Collection::set_wrapped_schema(Napi::Env &env) {
 }
 
 
-Napi::Value Collection::Path(const Napi::CallbackInfo &info) {
-  if (auto path = collection_->Path(); path) {
-    return Napi::String::New(info.Env(), path.value());
+bool Collection::ThrowIfClosed(Napi::Env &env) {
+  if (collection_) {
+    return false;
   } else {
-    ThrowIfNotOk(info.Env(), path.error());
-    return info.Env().Undefined();
+    ThrowIfNotOk(env, zvec::Status(zvec::StatusCode::FAILED_PRECONDITION,
+                                   "Collection is closed"));
+    return true;
+  }
+}
+
+
+Napi::Value Collection::Path(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  if (auto path = collection_->Path(); path) {
+    return Napi::String::New(env, path.value());
+  } else {
+    ThrowIfNotOk(env, path.error());
+    return env.Undefined();
   }
 }
 
 
 Napi::Value Collection::Schema(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (auto schema = collection_->Schema(); schema) {
     auto constructors = get_constructors(env);
     if (!constructors) {
@@ -253,6 +269,7 @@ Napi::Value Collection::Schema(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Options(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (auto options = collection_->Options(); options) {
     return CreateCollectionOptions(env, options.value());
   } else {
@@ -264,6 +281,7 @@ Napi::Value Collection::Options(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Stats(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (auto stats = collection_->Stats(); stats) {
     auto obj = Napi::Object::New(env);
     obj.Set("docCount", stats.value().doc_count);
@@ -282,6 +300,7 @@ Napi::Value Collection::Stats(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Insert(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(
         env, zvec::Status::InvalidArgument(
@@ -337,6 +356,7 @@ Napi::Value Collection::Insert(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Upsert(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(
         env, zvec::Status::InvalidArgument(
@@ -392,6 +412,7 @@ Napi::Value Collection::Upsert(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Update(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(
         env, zvec::Status::InvalidArgument(
@@ -447,6 +468,7 @@ Napi::Value Collection::Update(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Delete(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(
         env, zvec::Status::InvalidArgument(
@@ -504,6 +526,7 @@ Napi::Value Collection::Delete(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::DeleteByFilter(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1 || !info[0].IsString()) {
     ThrowIfNotOk(
         env, zvec::Status::InvalidArgument(
@@ -516,12 +539,34 @@ Napi::Value Collection::DeleteByFilter(const Napi::CallbackInfo &info) {
 }
 
 
+Napi::Value Collection::DeleteByFilterAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
+  if (info.Length() != 1 || !info[0].IsString()) {
+    RejectIfNotOk(
+        env,
+        zvec::Status::InvalidArgument(
+            "Collection.deleteByFilter(): Expected exactly 1 argument. "
+            "Argument must be a string"),
+        deferred);
+    return deferred.Promise();
+  }
+  std::string filter = info[0].As<Napi::String>().Utf8Value();
+  auto *worker =
+      new DeleteByFilterWorker(env, collection_, std::move(filter), deferred);
+  worker->Queue();
+  return deferred.Promise();
+}
+
+
 Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.query(): Expected exactly 1 argument. "
-                          "Argument must be an Query object"));
+                          "Argument must be a Query object"));
     return env.Undefined();
   }
 
@@ -546,8 +591,35 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
 }
 
 
+Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
+  if (info.Length() != 1) {
+    RejectIfNotOk(env,
+                  zvec::Status::InvalidArgument(
+                      "Collection.query(): Expected exactly 1 argument. "
+                      "Argument must be a Query object"),
+                  deferred);
+    return deferred.Promise();
+  }
+
+  if (auto parsed_query = ParseVectorQuery(info[0], get_wrapped_schema());
+      parsed_query) {
+    auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
+                                   std::move(parsed_query.value()), deferred);
+    worker->Queue();
+    return deferred.Promise();
+  } else {
+    RejectIfNotOk(env, parsed_query.error(), deferred);
+    return deferred.Promise();
+  }
+}
+
+
 Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(
         env, zvec::Status::InvalidArgument(
@@ -603,6 +675,7 @@ Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Optimize(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() > 1) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.optimize(): Expected 0 to 1 argument. "
@@ -622,11 +695,47 @@ Napi::Value Collection::Optimize(const Napi::CallbackInfo &info) {
       options = parsed_options.value();
     } else {
       ThrowIfNotOk(env, parsed_options.error());
-      return Napi::Object::New(env);
+      return env.Undefined();
     }
   }
   ThrowIfNotOk(env, collection_->Optimize(options));
   return env.Undefined();
+}
+
+
+Napi::Value Collection::OptimizeAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
+  if (info.Length() > 1) {
+    RejectIfNotOk(env,
+                  zvec::Status::InvalidArgument(
+                      "Collection.optimize(): Expected 0 to 1 argument. "
+                      "Argument must be an OptimizeOptions object."),
+                  deferred);
+    return deferred.Promise();
+  }
+  auto options{zvec::OptimizeOptions{}};
+  if (info.Length() == 1) {
+    if (!info[0].IsObject()) {
+      RejectIfNotOk(env,
+                    zvec::Status::InvalidArgument(
+                        "Collection.optimize(): Expected 0 to 1 argument. "
+                        "Argument must be an OptimizeOptions object."),
+                    deferred);
+      return deferred.Promise();
+    }
+    auto parsed_options = ParseOptimizeOptions(info[0].As<Napi::Object>());
+    if (parsed_options) {
+      options = parsed_options.value();
+    } else {
+      RejectIfNotOk(env, parsed_options.error(), deferred);
+      return deferred.Promise();
+    }
+  }
+  auto *worker = new OptimizeWorker(env, collection_, options, deferred);
+  worker->Queue();
+  return deferred.Promise();
 }
 
 
@@ -637,26 +746,30 @@ Napi::Value Collection::Close(const Napi::CallbackInfo &info) {
                           "Collection.close(): Expected no argument"));
     return env.Undefined();
   }
-  std::unique_lock<std::mutex> lock(ddl_lock_);
   collection_ = nullptr;
+  schema_ = nullptr;
   return env.Undefined();
 }
 
 
 Napi::Value Collection::Destroy(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 0) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.destroy(): Expected no argument"));
     return env.Undefined();
   }
   ThrowIfNotOk(env, collection_->Destroy());
+  collection_ = nullptr;
+  schema_ = nullptr;
   return env.Undefined();
 }
 
 
 Napi::Value Collection::AddColumn(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1 || !info[0].IsObject()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.addColumn(): Expected exactly 1 "
@@ -706,7 +819,6 @@ Napi::Value Collection::AddColumn(const Napi::CallbackInfo &info) {
       return env.Undefined();
     }
   }
-  std::unique_lock<std::mutex> lock(ddl_lock_);
   ThrowIfNotOk(env, collection_->AddColumn(parsed_field_schema.value(),
                                            expression, options));
   set_wrapped_schema(env);
@@ -716,6 +828,7 @@ Napi::Value Collection::AddColumn(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::DropColumn(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1 || !info[0].IsString()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.dropColumn(): Expected exactly 1 "
@@ -723,7 +836,6 @@ Napi::Value Collection::DropColumn(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
   auto field_name = info[0].As<Napi::String>().Utf8Value();
-  std::unique_lock<std::mutex> lock(ddl_lock_);
   ThrowIfNotOk(env, collection_->DropColumn(field_name));
   set_wrapped_schema(env);
   return env.Undefined();
@@ -732,6 +844,7 @@ Napi::Value Collection::DropColumn(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::AlterColumn(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1 || !info[0].IsObject()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.alterColumn(): Expected exactly 1 "
@@ -806,7 +919,6 @@ Napi::Value Collection::AlterColumn(const Napi::CallbackInfo &info) {
                           "Collection.alterColumn(): 'newColumnName' and "
                           "'fieldSchema' are mutually exclusive"));
   } else {
-    std::unique_lock<std::mutex> lock(ddl_lock_);
     ThrowIfNotOk(env, collection_->AlterColumn(column_name, new_column_name,
                                                field_schema, options));
     set_wrapped_schema(env);
@@ -817,6 +929,7 @@ Napi::Value Collection::AlterColumn(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::CreateIndex(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1 || !info[0].IsObject()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.createIndex(): Expected exactly 1 "
@@ -870,7 +983,6 @@ Napi::Value Collection::CreateIndex(const Napi::CallbackInfo &info) {
     }
   }
 
-  std::unique_lock<std::mutex> lock(ddl_lock_);
   ThrowIfNotOk(env, collection_->CreateIndex(
                         field_name, parsed_index_params.value(), options));
   set_wrapped_schema(env);
@@ -880,6 +992,7 @@ Napi::Value Collection::CreateIndex(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::DropIndex(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1 || !info[0].IsString()) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.dropIndex(): Expected exactly 1 "
@@ -887,7 +1000,6 @@ Napi::Value Collection::DropIndex(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
   auto field_name = info[0].As<Napi::String>().Utf8Value();
-  std::unique_lock<std::mutex> lock(ddl_lock_);
   ThrowIfNotOk(env, collection_->DropIndex(field_name));
   set_wrapped_schema(env);
   return env.Undefined();
