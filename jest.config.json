@@ -1,8 +1,13 @@
 {
-  "preset": "ts-jest",
   "testEnvironment": "node",
   "testMatch": [
     "<rootDir>/tests/*.test.ts",
     "<rootDir>/tests/**/*.test.ts"
-  ]
+  ],
+  "modulePathIgnorePatterns": [
+    "<rootDir>/build/"
+  ],
+  "transform": {
+    "^.+\\.ts$": ["ts-jest", { "diagnostics": { "ignoreCodes": [151002] } }]
+  }
 }

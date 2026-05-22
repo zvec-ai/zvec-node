@@ -21,7 +21,7 @@ ZVecInitialize({
 
 describe('Collection Columns', () => {
   const collectionPath = './test_columns_collection';
-  const dimension = 17;
+  const dimension = 43;
   let collection: ZVecCollection;
 
   const makeEmbedding = (hotIndex: number) =>
@@ -101,7 +101,7 @@ describe('Collection Columns', () => {
       const vectors = collection.schema.vectors();
       expect(vectors.length).toBe(1);
       expect(vectors[0].name).toBe('embedding');
-      expect(vectors[0].dimension).toBe(17);
+      expect(vectors[0].dimension).toBe(dimension);
     });
 
     it('should support insert, query, and delete with the new column', () => {
