@@ -8,7 +8,7 @@
   <a href="https://x.com/ZvecAI">🐦 <strong>X (Twitter)</strong> </a>
 </p>
 
-A Node.js binding for [Zvec](https://github.com/alibaba/zvec) —— a lightweight, lightning-fast, in-process vector database.
+The official Node.js binding for [Zvec](https://github.com/alibaba/zvec) — a lightweight, lightning-fast, in-process vector database.
 
 ## 💫 Features
 
@@ -22,18 +22,47 @@ A Node.js binding for [Zvec](https://github.com/alibaba/zvec) —— a lightweig
 
 ## 📦 Installation
 
-Install the package using npm:
-
 ```bash
 npm install @zvec/zvec
 ```
 
-### 🖥️ Supported Platforms
+### ✅ Supported Platforms
 
-- Linux (x86_64/ARM64)
+- Linux (x86_64, ARM64)
 - macOS (ARM64)
 - Windows (x86_64)
 
 ### 🛠️ Building from Source
 
 If you prefer to build Zvec from source, please check the [Building from Source](https://zvec.org/en/docs/db/build/) guide.
+
+## ⚡ One-Minute Example
+
+```typescript
+import { ZVecCreateAndOpen, ZVecCollectionSchema, ZVecDataType } from "@zvec/zvec";
+
+// Define collection schema
+const schema = new ZVecCollectionSchema({
+  name: "example",
+  vectors: { name: "embedding", dataType: ZVecDataType.VECTOR_FP32, dimension: 4 },
+});
+
+// Create collection
+const collection = ZVecCreateAndOpen("./zvec_example", schema);
+
+// Insert documents
+collection.insertSync([
+  { id: "doc_1", vectors: { embedding: [0.1, 0.2, 0.3, 0.4] } },
+  { id: "doc_2", vectors: { embedding: [0.2, 0.3, 0.4, 0.1] } },
+]);
+
+// Search by vector similarity
+const results = collection.querySync({
+  fieldName: "embedding",
+  vector: [0.4, 0.3, 0.3, 0.1],
+  topk: 10,
+});
+
+// Results: array of { id, score, vectors, fields }, sorted by relevance
+console.log(results);
+```
