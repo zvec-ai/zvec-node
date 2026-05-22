@@ -747,6 +747,7 @@ Napi::Value Collection::Close(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
   collection_ = nullptr;
+  schema_ = nullptr;
   return env.Undefined();
 }
 
@@ -761,6 +762,7 @@ Napi::Value Collection::Destroy(const Napi::CallbackInfo &info) {
   }
   ThrowIfNotOk(env, collection_->Destroy());
   collection_ = nullptr;
+  schema_ = nullptr;
   return env.Undefined();
 }
 
