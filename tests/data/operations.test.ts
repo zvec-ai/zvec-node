@@ -69,4 +69,28 @@ describe('Data Operations Pipeline', () => {
       expectDoc(results[0], 42, 1, 1);
     });
   });
+
+
+  describe('upsert', () => {
+    it('should upsert existing docs with new versions', () => {
+      batch(collection, 'upsert', 1, 500, 2, 2);
+      verifyDocs(collection, 1, 500, 2, 2);
+    });
+
+    it('should not affect other docs', () => {
+      verifyDocs(collection, 501, 1000, 1, 1);
+    });
+
+    it('should upsert new docs beyond the original range', () => {
+      batch(collection, 'upsert', 1001, 1500, 1, 1);
+      expect(collection.stats.docCount).toBe(1500);
+      verifyDocs(collection, 1001, 1500, 1, 1);
+    });
+
+  });
+
+  // NOTE: update, delete, and re-optimize tests are blocked by an engine bug.
+  // ReduceVectorIndex in segment_helper.cc uses MakeQuantizeVectorIndexPath
+  // for the primary index when quantization is enabled, causing "Failed to open index"
+  // on any re-optimize after new data is written to an already-optimized collection.
 });
