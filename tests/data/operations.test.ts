@@ -4,7 +4,7 @@ import {
   ZVecCreateAndOpen,
   ZVecInitialize,
   ZVecLogLevel,
-  ZVecLogType,
+  ZVecLogType
 } from '../../src/index';
 import { batch, createTestSchema, expectDoc, makeDoc, verifyDocs } from './helpers';
 
@@ -63,10 +63,24 @@ describe('Data Operations Pipeline', () => {
 
     it('should return correct results from vector query', () => {
       const doc = makeDoc(42, 1, 1);
-      const results = collection.querySync({
+      const denseResults = collection.querySync({
         fieldName: 'dense', vector: doc.vectors!.dense, topk: 1, includeVector: true
       });
-      expectDoc(results[0], 42, 1, 1);
+      expectDoc(denseResults[0], 42, 1, 1);
+      const sparseResults = collection.querySync({
+        fieldName: 'sparse', vector: doc.vectors!.sparse, topk: 1, includeVector: true
+      });
+      expectDoc(sparseResults[0], 42, 1, 1);
+    });
+
+    it('should respect outputFields selection', () => {
+      const doc = makeDoc(42, 1, 1);
+      const results = collection.querySync({
+        fieldName: 'dense', vector: doc.vectors!.dense, topk: 1,
+        outputFields: ['title']
+      });
+      expect(results[0].fields.title).toBeDefined();
+      expect(results[0].fields.price).toBeUndefined();
     });
   });
 
@@ -82,15 +96,39 @@ describe('Data Operations Pipeline', () => {
     });
 
     it('should upsert new docs beyond the original range', () => {
-      batch(collection, 'upsert', 1001, 1500, 1, 1);
+      batch(collection, 'upsert', 1001, 1500, 2, 2);
       expect(collection.stats.docCount).toBe(1500);
-      verifyDocs(collection, 1001, 1500, 1, 1);
+      verifyDocs(collection, 1001, 1500, 2, 2);
     });
 
   });
 
-  // NOTE: update, delete, and re-optimize tests are blocked by an engine bug.
-  // ReduceVectorIndex in segment_helper.cc uses MakeQuantizeVectorIndexPath
-  // for the primary index when quantization is enabled, causing "Failed to open index"
-  // on any re-optimize after new data is written to an already-optimized collection.
+
+  describe('async operations', () => {
+    it('should optimize asynchronously without blocking the event loop', async () => {
+      let eventLoopRanDuring = false;
+      const promise = collection.optimize();
+      setImmediate(() => { eventLoopRanDuring = true; });
+      await promise;
+
+      expect(eventLoopRanDuring).toBe(true);
+      expect(collection.stats.indexCompleteness['dense']).toBeCloseTo(1);
+      expect(collection.stats.indexCompleteness['sparse']).toBeCloseTo(1);
+    });
+
+    it('should resolve concurrent async queries with correct results', async () => {
+      const targets = [550, 600, 700, 800, 900, 950];
+      const queries = targets.map(k => {
+        const doc = makeDoc(k, 1, 1);
+        return collection.query({
+          fieldName: 'dense', vector: doc.vectors!.dense, topk: 10, includeVector: true,
+        }).then(results => ({ k, results }));
+      });
+
+      const allResults = await Promise.all(queries);
+      for (const { k, results } of allResults) {
+        expectDoc(results[0], k, 1, 1);
+      }
+    });
+  });
 });
