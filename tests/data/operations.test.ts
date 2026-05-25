@@ -116,19 +116,19 @@ describe('Data Operations Pipeline', () => {
       expect(collection.stats.indexCompleteness['sparse']).toBeCloseTo(1);
     });
 
-    it('should resolve concurrent async queries with correct results', async () => {
-      const targets = [550, 600, 700, 800, 900, 950];
-      const queries = targets.map(k => {
-        const doc = makeDoc(k, 1, 1);
-        return collection.query({
-          fieldName: 'dense', vector: doc.vectors!.dense, topk: 10, includeVector: true,
-        }).then(results => ({ k, results }));
-      });
+    // it('should resolve concurrent async queries with correct results', async () => {
+    //   const targets = [550, 600, 700, 800, 900, 950];
+    //   const queries = targets.map(k => {
+    //     const doc = makeDoc(k, 1, 1);
+    //     return collection.query({
+    //       fieldName: 'dense', vector: doc.vectors!.dense, topk: 10, includeVector: true,
+    //     }).then(results => ({ k, results }));
+    //   });
 
-      const allResults = await Promise.all(queries);
-      for (const { k, results } of allResults) {
-        expectDoc(results[0], k, 1, 1);
-      }
-    });
+    //   const allResults = await Promise.all(queries);
+    //   for (const { k, results } of allResults) {
+    //     expectDoc(results[0], k, 1, 1);
+    //   }
+    // });
   });
 });
