@@ -105,6 +105,48 @@ describe('Data Operations Pipeline', () => {
   });
 
 
+  describe('async operations', () => {
+    it('should optimize asynchronously without blocking the event loop', async () => {
+      let eventLoopRanDuring = false;
+      const promise = collection.optimize();
+      setImmediate(() => { eventLoopRanDuring = true; });
+      await promise;
+
+      expect(eventLoopRanDuring).toBe(true);
+      expect(collection.stats.indexCompleteness['dense']).toBeCloseTo(1);
+      expect(collection.stats.indexCompleteness['sparse']).toBeCloseTo(1);
+    });
+
+    it('should resolve concurrent async queries with correct results', async () => {
+      const targets = [550, 600, 700, 800, 900, 950];
+      const denseQueries = targets.map(k => {
+        const doc = makeDoc(k, 1, 1);
+        return collection.query({
+          fieldName: 'dense', vector: doc.vectors!.dense, topk: 10, includeVector: true,
+        }).then(results => ({ k, results }));
+      });
+      const sparseQueries = targets.map(k => {
+        const doc = makeDoc(k, 1, 1);
+        return collection.query({
+          fieldName: 'sparse', vector: doc.vectors!.sparse, topk: 10, includeVector: true,
+          filter: `title = "Product_${k}_v1"`
+        }).then(results => ({ k, results }));
+      });
+
+      const denseResults = await Promise.all(denseQueries);
+      for (const { k, results } of denseResults) {
+        expect(results.length).toBe(10);
+        expectDoc(results[0], k, 1, 1);
+      }
+      const sparseResults = await Promise.all(sparseQueries);
+      for (const { k, results } of sparseResults) {
+        expect(results.length).toBe(1);
+        expectDoc(results[0], k, 1, 1);
+      }
+    });
+  });
+
+
   describe('update', () => {
     it('should update scalar fields without changing vectors', () => {
       batch(collection, 'update', 501, 1000, 3, 1);
@@ -174,49 +216,6 @@ describe('Data Operations Pipeline', () => {
       verifyDocs(collection, 1, 500, 2, 2);
       verifyDocs(collection, 501, 1000, 3, 1);
       verifyDocs(collection, 1102, 1399, 2, 2);
-    });
-  });
-
-
-  describe('async operations', () => {
-    it('should optimize asynchronously without blocking the event loop', async () => {
-      let eventLoopRanDuring = false;
-      const promise = collection.optimize();
-      setImmediate(() => { eventLoopRanDuring = true; });
-      await promise;
-
-      expect(eventLoopRanDuring).toBe(true);
-      expect(collection.stats.indexCompleteness['dense']).toBeCloseTo(1);
-      expect(collection.stats.indexCompleteness['sparse']).toBeCloseTo(1);
-    });
-
-    it('should resolve concurrent async queries with correct results', async () => {
-      // docs 501-1000 now have fieldVersion=3, vectorVersion=1
-      const targets = [550, 600, 700, 800, 900, 950];
-      const denseQueries = targets.map(k => {
-        const doc = makeDoc(k, 3, 1);
-        return collection.query({
-          fieldName: 'dense', vector: doc.vectors!.dense, topk: 10, includeVector: true,
-        }).then(results => ({ k, results }));
-      });
-      const sparseQueries = targets.map(k => {
-        const doc = makeDoc(k, 3, 1);
-        return collection.query({
-          fieldName: 'sparse', vector: doc.vectors!.sparse, topk: 10, includeVector: true,
-          filter: `title = "Product_${k}_v3"`
-        }).then(results => ({ k, results }));
-      });
-
-      const denseResults = await Promise.all(denseQueries);
-      for (const { k, results } of denseResults) {
-        expect(results.length).toBe(10);
-        expectDoc(results[0], k, 3, 1);
-      }
-      const sparseResults = await Promise.all(sparseQueries);
-      for (const { k, results } of sparseResults) {
-        expect(results.length).toBe(1);
-        expectDoc(results[0], k, 3, 1);
-      }
     });
   });
 
