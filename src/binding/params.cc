@@ -505,6 +505,7 @@ zvec::Result<zvec::SearchQuery> ParseSearchQuery(
   }
 
   zvec::SearchQuery query{};
+  query.topk_ = 10;
   auto obj = value.As<Napi::Object>();
   zvec::FieldSchema *field_schema{nullptr};
 

@@ -2,8 +2,8 @@
 
 
 #include <napi.h>
-#include "zvec/db/status.h"
-#include "zvec/db/type.h"
+#include <zvec/db/status.h>
+#include <zvec/db/type.h>
 
 
 namespace binding {
