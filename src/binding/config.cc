@@ -1,5 +1,5 @@
 #include "config.h"
-#include "zvec/db/config.h"
+#include <zvec/db/config.h>
 #include "types.h"
 
 
@@ -17,11 +17,11 @@ Napi::Object CreateLogTypeObject(Napi::Env env) {
 
 Napi::Object CreateLogLevelObject(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
-  obj.Set("DEBUG", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::DEBUG));
-  obj.Set("INFO", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::INFO));
-  obj.Set("WARN", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::WARN));
-  obj.Set("ERROR", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::ERROR));
-  obj.Set("FATAL", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::FATAL));
+  obj.Set("DEBUG", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kDebug));
+  obj.Set("INFO", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kInfo));
+  obj.Set("WARN", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kWarn));
+  obj.Set("ERROR", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kError));
+  obj.Set("FATAL", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kFatal));
   obj.Freeze();
   return obj;
 }
@@ -41,7 +41,7 @@ Napi::Value Initialize(const Napi::CallbackInfo &info) {
 
   if (obj.Has("logType") || obj.Has("logLevel")) {
     std::string log_type = "console";
-    zvec::GlobalConfig::LogLevel log_level{zvec::GlobalConfig::LogLevel::WARN};
+    zvec::GlobalConfig::LogLevel log_level{zvec::GlobalConfig::LogLevel::kWarn};
     if (obj.Has("logType")) {
       if (obj.Get("logType").IsString()) {
         log_type = obj.Get("logType").As<Napi::String>().Utf8Value();
@@ -160,6 +160,29 @@ Napi::Value Initialize(const Napi::CallbackInfo &info) {
     }
   }
 
+  if (obj.Has("ftsBruteForceByKeysRatio")) {
+    if (obj.Get("ftsBruteForceByKeysRatio").IsNumber()) {
+      config.fts_brute_force_by_keys_ratio =
+          obj.Get("ftsBruteForceByKeysRatio").As<Napi::Number>().FloatValue();
+    } else {
+      ThrowIfNotOk(env,
+                   zvec::Status::InvalidArgument("Expected a number for "
+                                                 "'ftsBruteForceByKeysRatio'"));
+      return env.Undefined();
+    }
+  }
+
+  if (obj.Has("jiebaDictDir")) {
+    if (obj.Get("jiebaDictDir").IsString()) {
+      config.jieba_dict_dir =
+          obj.Get("jiebaDictDir").As<Napi::String>().Utf8Value();
+    } else {
+      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                            "Expected a string for 'jiebaDictDir'"));
+      return env.Undefined();
+    }
+  }
+
   if (auto s = zvec::GlobalConfig::Instance().Initialize(config); !s.ok()) {
     ThrowIfNotOk(env, s);
   }
@@ -167,10 +190,34 @@ Napi::Value Initialize(const Napi::CallbackInfo &info) {
 }
 
 
+Napi::Value SetDefaultJiebaDictDir(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (info.Length() != 1 || !info[0].IsString()) {
+    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                          "setDefaultJiebaDictDir() expects exactly one "
+                          "argument: (dir: string)"));
+    return env.Undefined();
+  }
+  zvec::GlobalConfig::Instance().set_default_jieba_dict_dir(
+      info[0].As<Napi::String>().Utf8Value());
+  return env.Undefined();
+}
+
+
+Napi::Value GetDefaultJiebaDictDir(const Napi::CallbackInfo &info) {
+  return Napi::String::New(info.Env(),
+                           zvec::GlobalConfig::Instance().jieba_dict_dir());
+}
+
+
 Napi::Object InitConfig(Napi::Env env, Napi::Object exports) {
   exports.Set("LogType", CreateLogTypeObject(env));
   exports.Set("LogLevel", CreateLogLevelObject(env));
   exports.Set("initialize", Napi::Function::New(env, Initialize));
+  exports.Set("setDefaultJiebaDictDir",
+              Napi::Function::New(env, SetDefaultJiebaDictDir));
+  exports.Set("getDefaultJiebaDictDir",
+              Napi::Function::New(env, GetDefaultJiebaDictDir));
   return exports;
 }
 

@@ -2,7 +2,7 @@
 
 
 #include <napi.h>
-#include "zvec/db/schema.h"
+#include <zvec/db/schema.h>
 #include "addon.h"
 
 

@@ -182,8 +182,8 @@ CollectionSchema::CollectionSchema(const Napi::CallbackInfo &info)
   if (info.Length() != 1) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "CollectionSchema constructor expects 1 argument "
-                          "(schema definition object): { name: string, fields: "
-                          "[...], vectors: [...] }"));
+                          "(schema definition object): { name: string, "
+                          "fields?: [...], vectors?: [...] }"));
     return;
   }
 
@@ -219,35 +219,31 @@ CollectionSchema::CollectionSchema(const Napi::CallbackInfo &info)
 
   std::vector<zvec::FieldSchema::Ptr> fields;
 
-  if (!obj.Has("vectors")) {
-    ThrowIfNotOk(
-        env, zvec::Status::InvalidArgument(
-                 "Missing required argument 'vectors' in CollectionSchema"));
-    return;
-  }
-  Napi::Value vectorsValue = obj.Get("vectors");
-  if (vectorsValue.IsArray()) {
-    Napi::Array vectorsArray = vectorsValue.As<Napi::Array>();
-    for (uint32_t i = 0; i < vectorsArray.Length(); i++) {
-      auto parsed_vector_schema = ParseVectorSchema(vectorsArray.Get(i));
+  if (obj.Has("vectors")) {
+    Napi::Value vectorsValue = obj.Get("vectors");
+    if (vectorsValue.IsArray()) {
+      Napi::Array vectorsArray = vectorsValue.As<Napi::Array>();
+      for (uint32_t i = 0; i < vectorsArray.Length(); i++) {
+        auto parsed_vector_schema = ParseVectorSchema(vectorsArray.Get(i));
+        if (!parsed_vector_schema) {
+          ThrowIfNotOk(env, parsed_vector_schema.error());
+          return;
+        }
+        fields.emplace_back(parsed_vector_schema.value());
+      }
+    } else if (vectorsValue.IsObject()) {
+      auto parsed_vector_schema = ParseVectorSchema(vectorsValue);
       if (!parsed_vector_schema) {
         ThrowIfNotOk(env, parsed_vector_schema.error());
         return;
       }
       fields.emplace_back(parsed_vector_schema.value());
-    }
-  } else if (vectorsValue.IsObject()) {
-    auto parsed_vector_schema = ParseVectorSchema(vectorsValue);
-    if (!parsed_vector_schema) {
-      ThrowIfNotOk(env, parsed_vector_schema.error());
+    } else if (!vectorsValue.IsUndefined() && !vectorsValue.IsNull()) {
+      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                            "CollectionSchema constructor: argument 'vectors' "
+                            "must be an object or an array of objects"));
       return;
     }
-    fields.emplace_back(parsed_vector_schema.value());
-  } else {
-    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                          "CollectionSchema constructor: argument 'vectors' "
-                          "must be an object or an array of objects"));
-    return;
   }
 
   if (obj.Has("fields")) {
@@ -269,7 +265,7 @@ CollectionSchema::CollectionSchema(const Napi::CallbackInfo &info)
         return;
       }
       fields.emplace_back(parsed_field_schema.value());
-    } else {
+    } else if (!fieldsValue.IsUndefined() && !fieldsValue.IsNull()) {
       ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                             "CollectionSchema constructor: argument 'fields' "
                             "must be an object or an array of objects"));

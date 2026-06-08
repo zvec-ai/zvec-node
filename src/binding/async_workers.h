@@ -3,8 +3,8 @@
 
 #include <napi.h>
 #include <string>
-#include "zvec/db/collection.h"
-#include "zvec/db/status.h"
+#include <zvec/db/collection.h>
+#include <zvec/db/status.h>
 
 
 namespace binding {
@@ -30,7 +30,7 @@ class DeleteByFilterWorker : public Napi::AsyncWorker {
 class QueryWorker : public Napi::AsyncWorker {
  public:
   QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
-              zvec::CollectionSchema::Ptr schema, zvec::VectorQuery query,
+              zvec::CollectionSchema::Ptr schema, zvec::SearchQuery query,
               Napi::Promise::Deferred deferred);
 
   void Execute() override;
@@ -40,7 +40,7 @@ class QueryWorker : public Napi::AsyncWorker {
  private:
   zvec::Collection::Ptr collection_;
   zvec::CollectionSchema::Ptr schema_;
-  zvec::VectorQuery query_;
+  zvec::SearchQuery query_;
   Napi::Promise::Deferred deferred_;
   zvec::Status status_;
   zvec::DocPtrList results_;
