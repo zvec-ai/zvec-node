@@ -2,6 +2,7 @@ import {
   ZVecCollectionSchema,
   ZVecDataType,
   ZVecDiskAnnIndexParams,
+  ZVecFtsIndexParams,
   ZVecHnswIndexParams,
   ZVecHnswRabitqIndexParams,
   ZVecIndexType,
@@ -305,5 +306,34 @@ describe('CollectionSchema', () => {
     expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).listSize).toBe(50);
     expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).pqChunkNum).toBe(0);
     expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).quantizeType).toBe(ZVecQuantizeType.UNDEFINED);
+  });
+
+
+  it('should parse FTS index params correctly', () => {
+    const schema = new ZVecCollectionSchema({
+      name: 'test_fts',
+      fields: {
+        name: 'content',
+        dataType: ZVecDataType.STRING,
+        indexParams: {
+          indexType: ZVecIndexType.FTS,
+          tokenizerName: 'whitespace',
+          filters: ['lowercase'],
+          extraParams: '{"jieba_dict_dir": "/path/to/jieba/dict"}'
+        }
+      }
+    });
+
+    expect(schema).toBeInstanceOf(ZVecCollectionSchema);
+    expect(schema.name).toBe('test_fts');
+
+    const fields = schema.fields();
+    expect(fields.length).toBe(1);
+    expect(fields[0].name).toBe('content');
+    expect(fields[0].dataType).toBe(ZVecDataType.STRING);
+    expect(fields[0].indexParams!.indexType).toBe(ZVecIndexType.FTS);
+    expect((fields[0].indexParams as ZVecFtsIndexParams).tokenizerName).toBe('whitespace');
+    expect((fields[0].indexParams as ZVecFtsIndexParams).filters).toEqual(['lowercase']);
+    expect((fields[0].indexParams as ZVecFtsIndexParams).extraParams).toBe('{"jieba_dict_dir": "/path/to/jieba/dict"}');
   });
 });

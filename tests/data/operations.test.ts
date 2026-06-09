@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import {
   ZVecCollection,
   ZVecCreateAndOpen,
+  ZVecIndexType,
   ZVecInitialize,
   ZVecLogLevel,
   ZVecLogType,
@@ -49,8 +50,11 @@ describe('Data Operations Pipeline', () => {
       expectDoc(results[0], 42, 1, 1);
     });
 
-    it('should respect fetch projection controls', () => {
+    it('should fetch docs correctly', () => {
       const doc = makeDoc(42, 1, 1);
+      expectDoc(collection.fetchSync(doc.id)[doc.id], 42, 1, 1);
+      expectDoc(collection.fetchSync({ ids: doc.id })[doc.id], 42, 1, 1);
+
       const fetched = collection.fetchSync({
         ids: doc.id,
         outputFields: ['title'],
@@ -59,6 +63,20 @@ describe('Data Operations Pipeline', () => {
       expect(fetched.fields.title).toBe(doc.fields!.title);
       expect(fetched.fields.price).toBeUndefined();
       expect(Object.keys(fetched.vectors)).toHaveLength(0);
+
+      const docs = [makeDoc(43, 1, 1), makeDoc(44, 1, 1)];
+      const ids = docs.map(doc => doc.id);
+      const batchFetched = collection.fetchSync({
+        ids,
+        outputFields: []
+      });
+      expect(new Set(Object.keys(batchFetched))).toEqual(new Set(ids));
+      for (const doc of docs) {
+        expect(batchFetched[doc.id].id).toBe(doc.id);
+        expect(Object.keys(batchFetched[doc.id].fields)).toHaveLength(0);
+        expect(batchFetched[doc.id].vectors.dense).toBeDefined();
+        expect(batchFetched[doc.id].vectors.sparse).toBeDefined();
+      }
     });
   });
 
@@ -144,6 +162,20 @@ describe('Data Operations Pipeline', () => {
           filter: `title = "Product_${k}_v1"`
         }).then(results => ({ k, results }));
       });
+      const ftsQueries = targets.map(k => {
+        const doc = makeDoc(k, 1, 1);
+        return collection.query({
+          fieldName: 'content',
+          fts: { matchString: doc.fields!.content },
+          params: {
+            indexType: ZVecIndexType.FTS,
+            defaultOperator: 'AND'
+          },
+          topk: 10,
+          outputFields: ['title'],
+          includeVector: false
+        }).then(results => ({ k, results }));
+      });
 
       const denseResults = await Promise.all(denseQueries);
       for (const { k, results } of denseResults) {
@@ -154,6 +186,14 @@ describe('Data Operations Pipeline', () => {
       for (const { k, results } of sparseResults) {
         expect(results.length).toBe(1);
         expectDoc(results[0], k, 1, 1);
+      }
+      const ftsResults = await Promise.all(ftsQueries);
+      for (const { k, results } of ftsResults) {
+        expect(results.length).toBe(1);
+        expect(results[0].id).toBe(`doc_${k}`);
+        expect(results[0].fields.title).toBe(`Product_${k}_v1`);
+        expect(results[0].fields.content).toBeUndefined();
+        expect(Object.keys(results[0].vectors)).toHaveLength(0);
       }
     });
   });
@@ -285,6 +325,23 @@ describe('Data Operations Pipeline', () => {
         fail('expected to throw');
       } catch (e) {
         expect(isZVecError(e)).toBe(true);
+      }
+    });
+
+    it('should throw clear fetch errors for invalid fetch options', () => {
+      const invalidCalls = [
+        () => collection.fetchSync({} as any),
+        () => collection.fetchSync({ ids: 42 } as any),
+        () => collection.fetchSync({ ids: 'doc_1', outputFields: 'title' } as any),
+        () => collection.fetchSync({ ids: 'doc_1', includeVector: 'false' } as any)
+      ];
+      for (const call of invalidCalls) {
+        try {
+          call();
+          fail('expected to throw');
+        } catch (e) {
+          expect(isZVecError(e)).toBe(true);
+        }
       }
     });
   });

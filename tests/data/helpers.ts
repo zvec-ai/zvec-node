@@ -44,6 +44,11 @@ const TEST_SCHEMA = {
       dataType: ZVecDataType.FLOAT,
       nullable: true,
       indexParams: { indexType: ZVecIndexType.INVERT, enableRangeOptimization: true }
+    },
+    {
+      name: 'content',
+      dataType: ZVecDataType.STRING,
+      indexParams: { indexType: ZVecIndexType.FTS }
     }
   ]
 };
@@ -57,6 +62,9 @@ export function createTestSchema(name: string): ZVecCollectionSchema {
 
 function title(k: number, version: number): string { return `Product_${k}_v${version}`; }
 function price(k: number, version: number): number { return (k + 0.99) * version; }
+function content(k: number, version: number): string {
+  return `product ${k} version ${version} search content`;
+}
 function dense(k: number, version: number): number[] {
   const s = k * 1000 + version;
   return Array.from({ length: DIMENSION }, (_, i) => Math.sin(s * (i + 1)));
@@ -70,14 +78,22 @@ export function makeDoc(k: number, fieldVersion: number, vectorVersion: number):
   return {
     id: `doc_${k}`,
     vectors: { dense: dense(k, vectorVersion), sparse: sparse(k, vectorVersion) },
-    fields: { title: title(k, fieldVersion), price: price(k, fieldVersion) }
+    fields: {
+      title: title(k, fieldVersion),
+      price: price(k, fieldVersion),
+      content: content(k, fieldVersion)
+    }
   };
 }
 
 export function makeUpdate(k: number, fieldVersion: number): ZVecDocInput {
   return {
     id: `doc_${k}`,
-    fields: { title: title(k, fieldVersion), price: price(k, fieldVersion) }
+    fields: {
+      title: title(k, fieldVersion),
+      price: price(k, fieldVersion),
+      content: content(k, fieldVersion)
+    }
   };
 }
 
