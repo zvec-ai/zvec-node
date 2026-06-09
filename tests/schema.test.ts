@@ -1,6 +1,7 @@
 import {
   ZVecCollectionSchema,
   ZVecDataType,
+  ZVecDiskAnnIndexParams,
   ZVecHnswIndexParams,
   ZVecHnswRabitqIndexParams,
   ZVecIndexType,
@@ -250,5 +251,59 @@ describe('CollectionSchema', () => {
     expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).m).toBe(50);
     expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).efConstruction).toBe(500);
     expect((vectors[1].indexParams as ZVecHnswRabitqIndexParams).sampleCount).toBe(0);
+  });
+
+
+  (isLinuxX64 ? it : it.skip)('should parse DiskANN index params correctly', () => {
+    const schema = new ZVecCollectionSchema({
+      name: 'test_diskann',
+      vectors: [
+        {
+          name: 'vector1',
+          dataType: ZVecDataType.VECTOR_FP32,
+          dimension: 128,
+          indexParams: {
+            indexType: ZVecIndexType.DISKANN,
+            metricType: ZVecMetricType.L2,
+            maxDegree: 64,
+            listSize: 80,
+            pqChunkNum: 8,
+            quantizeType: ZVecQuantizeType.FP16
+          }
+        },
+        {
+          name: 'vector2',
+          dataType: ZVecDataType.VECTOR_FP32,
+          dimension: 64,
+          indexParams: {
+            indexType: ZVecIndexType.DISKANN
+          }
+        }
+      ]
+    });
+
+    expect(schema).toBeInstanceOf(ZVecCollectionSchema);
+    expect(schema.name).toBe('test_diskann');
+
+    const vectors = schema.vectors();
+    expect(vectors.length).toBe(2);
+    expect(vectors[0].name).toBe('vector1');
+    expect(vectors[0].dataType).toBe(ZVecDataType.VECTOR_FP32);
+    expect(vectors[0].dimension).toBe(128);
+    expect(vectors[0].indexParams!.indexType).toBe(ZVecIndexType.DISKANN);
+    expect(vectors[0].indexParams!.metricType).toBe(ZVecMetricType.L2);
+    expect((vectors[0].indexParams as ZVecDiskAnnIndexParams).maxDegree).toBe(64);
+    expect((vectors[0].indexParams as ZVecDiskAnnIndexParams).listSize).toBe(80);
+    expect((vectors[0].indexParams as ZVecDiskAnnIndexParams).pqChunkNum).toBe(8);
+    expect((vectors[0].indexParams as ZVecDiskAnnIndexParams).quantizeType).toBe(ZVecQuantizeType.FP16);
+    expect(vectors[1].name).toBe('vector2');
+    expect(vectors[1].dataType).toBe(ZVecDataType.VECTOR_FP32);
+    expect(vectors[1].dimension).toBe(64);
+    expect(vectors[1].indexParams!.indexType).toBe(ZVecIndexType.DISKANN);
+    expect(vectors[1].indexParams!.metricType).toBe(ZVecMetricType.IP);
+    expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).maxDegree).toBe(100);
+    expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).listSize).toBe(50);
+    expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).pqChunkNum).toBe(0);
+    expect((vectors[1].indexParams as ZVecDiskAnnIndexParams).quantizeType).toBe(ZVecQuantizeType.UNDEFINED);
   });
 });

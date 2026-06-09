@@ -48,6 +48,18 @@ describe('Data Operations Pipeline', () => {
       });
       expectDoc(results[0], 42, 1, 1);
     });
+
+    it('should respect fetch projection controls', () => {
+      const doc = makeDoc(42, 1, 1);
+      const fetched = collection.fetchSync({
+        ids: doc.id,
+        outputFields: ['title'],
+        includeVector: false
+      })[doc.id];
+      expect(fetched.fields.title).toBe(doc.fields!.title);
+      expect(fetched.fields.price).toBeUndefined();
+      expect(Object.keys(fetched.vectors)).toHaveLength(0);
+    });
   });
 
 
