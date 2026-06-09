@@ -189,9 +189,10 @@ describe('Data Operations Pipeline', () => {
       }
       const ftsResults = await Promise.all(ftsQueries);
       for (const { k, results } of ftsResults) {
+        const doc = makeDoc(k, 1, 1);
         expect(results.length).toBe(1);
-        expect(results[0].id).toBe(`doc_${k}`);
-        expect(results[0].fields.title).toBe(`Product_${k}_v1`);
+        expect(results[0].id).toBe(doc.id);
+        expect(results[0].fields.title).toBe(doc.fields!.title);
         expect(results[0].fields.content).toBeUndefined();
         expect(Object.keys(results[0].vectors)).toHaveLength(0);
       }
