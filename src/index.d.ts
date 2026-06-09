@@ -1126,6 +1126,13 @@ export declare class ZVecCollection {
 
   /**
    * Fetches documents by their IDs.
+   * @param ids - A single document ID or an array of document IDs to fetch.
+   * @returns An object mapping the requested IDs to their corresponding documents. If an ID is not found, it will not be present in the returned object.
+   */
+  fetchSync(ids: string | string[]): Record<string, ZVecDoc>;
+
+  /**
+   * Fetches documents by their IDs.
    * @param params - Fetch parameters.
    * @param params.ids - A single document ID or an array of document IDs to fetch.
    * @param params.outputFields - Scalar fields to include. If undefined, all scalar fields are returned. An empty array returns no scalar fields.
