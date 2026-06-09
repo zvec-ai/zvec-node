@@ -26,6 +26,15 @@ try {
   fs.copyFileSync(targetPath, destPath);
   console.log(`Binary copied from ${targetPath} to ${destPath}`);
 
+  // DiskANN currently ships as a runtime-loaded plugin. Local packs bundle it
+  // beside the addon binary so the C++ engine can auto-load it when needed.
+  const pluginPath = path.join(platformPackageDir, 'libzvec_diskann_plugin.so');
+  if (fs.existsSync(pluginPath)) {
+    const pluginDestPath = path.join(PACKAGE_ROOT, 'libzvec_diskann_plugin.so');
+    fs.copyFileSync(pluginPath, pluginDestPath);
+    console.log(`DiskANN plugin copied from ${pluginPath} to ${pluginDestPath}`);
+  }
+
   // Temporarily remove optionalDependencies from package.json
   // (local pack bundles the binary directly, no need for platform packages)
   const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');

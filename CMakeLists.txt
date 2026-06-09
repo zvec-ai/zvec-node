@@ -68,6 +68,10 @@ set(ZVEC_BUILD_TARGETS
     --target zvec_turbo
     --target zvec_db
 )
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+    list(APPEND ZVEC_BUILD_TARGETS --target core_knn_diskann)
+    list(APPEND ZVEC_BYPRODUCTS ${ZVEC_LIB_DIR}/libzvec_diskann_plugin.so)
+endif()
 set(ZVEC_CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release)
 if(MSVC)
     list(APPEND ZVEC_CMAKE_ARGS
@@ -141,6 +145,7 @@ if (NOT WIN32)
         ${GLOG_LIB}
         ${GFLAGS_LIB}
         ${PROTOBUF_LIB}
+        FastPFOR
         lz4
     )
 else ()
@@ -165,6 +170,7 @@ else ()
         ${GLOG_LIB}
         ${GFLAGS_LIB}
         ${PROTOBUF_LIB}
+        FastPFOR
         lz4
         rpcrt4
         shlwapi
@@ -317,4 +323,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
             COMMENT "Stripping symbols (Linux)"
         )
     endif()
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${ZVEC_LIB_DIR}/libzvec_diskann_plugin.so"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/libzvec_diskann_plugin.so"
+        COMMENT "Copying DiskANN runtime plugin"
+    )
 endif()
