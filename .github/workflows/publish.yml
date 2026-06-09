@@ -39,6 +39,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          dnf install -y libaio-devel
           curl -sL ${{ matrix.cmake_url }} | tar xz -C /usr/local --strip-components=1
           npm install --ignore-scripts
 
