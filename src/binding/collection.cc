@@ -1,4 +1,5 @@
 #include "collection.h"
+#include <optional>
 #include "async_workers.h"
 #include "doc.h"
 #include "params.h"
@@ -570,7 +571,7 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
 
-  if (auto parsed_query = ParseVectorQuery(info[0], get_wrapped_schema());
+  if (auto parsed_query = ParseSearchQuery(info[0], get_wrapped_schema());
       parsed_query) {
     auto res = collection_->Query(parsed_query.value());
     if (res) {
@@ -604,7 +605,7 @@ Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
     return deferred.Promise();
   }
 
-  if (auto parsed_query = ParseVectorQuery(info[0], get_wrapped_schema());
+  if (auto parsed_query = ParseSearchQuery(info[0], get_wrapped_schema());
       parsed_query) {
     auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
                                    std::move(parsed_query.value()), deferred);
@@ -620,41 +621,86 @@ Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
 Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
-  if (info.Length() != 1) {
-    ThrowIfNotOk(
-        env, zvec::Status::InvalidArgument(
-                 "Collection.fetch(): Expected exactly 1 argument. "
-                 "Argument must be an id string or an array of id strings."));
+  if (info.Length() != 1 || !info[0].IsObject()) {
+    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                          "Collection.fetch(): Expected exactly 1 argument: "
+                          "({ ids: string | string[], outputFields?: string[], "
+                          "includeVector?: boolean })."));
     return env.Undefined();
   }
 
-  std::vector<std::string> pks{};
   zvec::Result<zvec::DocPtrMap> res;
+  std::vector<std::string> pks{};
+  std::optional<std::vector<std::string>> output_fields{};
+  bool include_vector{true};
+  auto obj = info[0].As<Napi::Object>();
 
-  if (info[0].IsArray()) {
-    Napi::Array pkArray = info[0].As<Napi::Array>();
+  if (!obj.Has("ids")) {
+    ThrowIfNotOk(env,
+                 zvec::Status::InvalidArgument(
+                     "Collection.fetch(): Missing required argument 'ids'"));
+    return env.Undefined();
+  }
+  if (obj.Has("outputFields") && !obj.Get("outputFields").IsUndefined()) {
+    if (!obj.Get("outputFields").IsArray()) {
+      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                            "Collection.fetch(): argument 'outputFields' must "
+                            "be an array of strings"));
+      return env.Undefined();
+    }
+    std::vector<std::string> fields{};
+    auto array = obj.Get("outputFields").As<Napi::Array>();
+    fields.reserve(array.Length());
+    for (uint32_t i = 0; i < array.Length(); i++) {
+      auto item = array.Get(i);
+      if (!item.IsString()) {
+        ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                              "Collection.fetch(): Expected an array of "
+                              "strings for 'outputFields'"));
+        return env.Undefined();
+      }
+      fields.emplace_back(item.As<Napi::String>().Utf8Value());
+    }
+    output_fields = std::move(fields);
+  }
+  if (obj.Has("includeVector") && !obj.Get("includeVector").IsUndefined()) {
+    if (!obj.Get("includeVector").IsBoolean()) {
+      ThrowIfNotOk(
+          env,
+          zvec::Status::InvalidArgument(
+              "Collection.fetch(): Expected a boolean for 'includeVector'"));
+      return env.Undefined();
+    }
+    include_vector = obj.Get("includeVector").As<Napi::Boolean>().Value();
+  }
+
+  auto ids = obj.Get("ids");
+  if (ids.IsArray()) {
+    Napi::Array pkArray = ids.As<Napi::Array>();
     uint32_t length = pkArray.Length();
     pks.reserve(length);
     for (uint32_t i = 0; i < length; i++) {
       if (pkArray.Get(i).IsString()) {
         pks.emplace_back(pkArray.Get(i).As<Napi::String>().Utf8Value());
       } else {
-        ThrowIfNotOk(env,
-                     zvec::Status::InvalidArgument("Expected a string for id"));
+        ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                              "Collection.fetch(): Expected a string or array "
+                              "of strings for 'ids'"));
         return env.Undefined();
       }
     }
-    res = collection_->Fetch(pks);
   } else {
-    if (info[0].IsString()) {
-      pks.emplace_back(info[0].As<Napi::String>().Utf8Value());
+    if (ids.IsString()) {
+      pks.emplace_back(ids.As<Napi::String>().Utf8Value());
     } else {
-      ThrowIfNotOk(env,
-                   zvec::Status::InvalidArgument("Expected a string for id"));
+      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                            "Collection.fetch(): Expected a string or array of "
+                            "strings for 'ids'"));
       return env.Undefined();
     }
-    res = collection_->Fetch(pks);
   }
+
+  res = collection_->Fetch(pks, output_fields, include_vector);
 
   if (res) {
     Napi::Object obj = Napi::Object::New(env);
