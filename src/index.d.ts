@@ -52,7 +52,9 @@ export declare const ZVecIndexType: {
   readonly IVF: 2;
   readonly FLAT: 3;
   readonly HNSW_RABITQ: 4;
+  readonly DISKANN: 5;
   readonly INVERT: 10;
+  readonly FTS: 11;
 };
 
 export type ZVecIndexType = typeof ZVecIndexType[keyof typeof ZVecIndexType];
@@ -181,18 +183,55 @@ export interface ZVecInitOptions {
    * @default undefined // Let the system decide
    */
   readonly optimizeThreads?: number;
+
+  /**
+   * Threshold to switch from inverted-index filtering to forward scan.
+   * @default undefined
+   */
+  readonly invertToForwardScanRatio?: number;
+
+  /**
+   * Threshold to use brute-force key lookup over index lookup.
+   * @default undefined
+   */
+  readonly bruteForceByKeysRatio?: number;
+
+  /**
+   * Threshold to switch FTS scan strategy for highly selective candidates.
+   * @default undefined
+   */
+  readonly ftsBruteForceByKeysRatio?: number;
+
+  /**
+   * Directory containing jieba tokenizer dictionary files.
+   * @default undefined
+   */
+  readonly jiebaDictDir?: string;
 }
 
 
 /**
  * Initializes global Zvec configurations.
  * This function should be called only once at the start of your application.
- * @param options - Optional configuration parameters.
+ * @param options - Configuration parameters.
  *
  * @group Global Configuration
  */
-export function ZVecInitialize(options?: ZVecInitOptions): void;
+export function ZVecInitialize(options: ZVecInitOptions): void;
 
+/**
+ * Registers the process-wide default jieba dictionary directory.
+ *
+ * @group Global Configuration
+ */
+export function ZVecSetDefaultJiebaDictDir(dir: string): void;
+
+/**
+ * Reads the process-wide default jieba dictionary directory.
+ *
+ * @group Global Configuration
+ */
+export function ZVecGetDefaultJiebaDictDir(): string;
 
 /**
  * Base interface for index parameters, requiring the type of index.
@@ -259,6 +298,12 @@ export interface ZVecHnswIndexParams extends ZVecIndexParams {
    * @default ZVecQuantizeType.UNDEFINED
    */
   readonly quantizeType?: ZVecQuantizeType;
+
+  /**
+   * Whether to allocate HNSW graph nodes in contiguous memory.
+   * @default false
+   */
+  readonly useContiguousMemory?: boolean;
 }
 
 
@@ -350,6 +395,47 @@ export interface ZVecIVFIndexParams extends ZVecIndexParams {
 
 
 /**
+ * Configuration parameters for a DiskANN index on a vector field.
+ *
+ * @group Index Parameters
+ */
+export interface ZVecDiskAnnIndexParams extends ZVecIndexParams {
+  /** Must be `ZVecIndexType.DISKANN` (5). */
+  readonly indexType: typeof ZVecIndexType.DISKANN;
+
+  /**
+   * Distance metric used for similarity computation.
+   * @default ZVecMetricType.IP
+   */
+  readonly metricType?: ZVecMetricType;
+
+  /**
+   * Maximum out-degree of each graph node.
+   * @default 100
+   */
+  readonly maxDegree?: number;
+
+  /**
+   * Candidate list size used during graph construction.
+   * @default 50
+   */
+  readonly listSize?: number;
+
+  /**
+   * Maximum number of PQ chunks for product quantization. `0` lets the engine choose.
+   * @default 0
+   */
+  readonly pqChunkNum?: number;
+
+  /**
+   * Optional quantization type for vector compression.
+   * @default ZVecQuantizeType.UNDEFINED
+   */
+  readonly quantizeType?: ZVecQuantizeType;
+}
+
+
+/**
  * Configuration parameters for an inverted index on a scalar field.
  *
  * @group Index Parameters
@@ -373,13 +459,50 @@ export interface ZVecInvertIndexParams extends ZVecIndexParams {
 
 
 /**
+ * Configuration parameters for a full-text search index on a scalar string field.
+ *
+ * @group Index Parameters
+ */
+export interface ZVecFtsIndexParams extends ZVecIndexParams {
+  /** Must be `ZVecIndexType.FTS` (11). */
+  readonly indexType: typeof ZVecIndexType.FTS;
+
+  /**
+   * Tokenizer name.
+   * @default "standard"
+   */
+  readonly tokenizerName?: string;
+
+  /**
+   * Token filters.
+   * @default ["lowercase"]
+   */
+  readonly filters?: string[];
+
+  /**
+   * Additional tokenizer parameters as a JSON object string.
+   * @default ""
+   */
+  readonly extraParams?: string;
+}
+
+
+/**
  * Base interface for query-time parameters, requiring the type of index.
  *
  * @group Query Parameters
  */
 export interface ZVecQueryParams {
   readonly indexType: ZVecIndexType;
+}
 
+
+/**
+ * Base interface for vector query-time parameters.
+ *
+ * @group Query Parameters
+ */
+interface ZVecVectorQueryParams extends ZVecQueryParams {
   /**
    * Search radius for range queries. Used in combination with top-k to filter results.
    * @default 0.0 (disabled)
@@ -405,7 +528,7 @@ export interface ZVecQueryParams {
  *
  * @group Query Parameters
  */
-export interface ZVecHnswQueryParams extends ZVecQueryParams {
+export interface ZVecHnswQueryParams extends ZVecVectorQueryParams {
   /** Must be `ZVecIndexType.HNSW` (1). */
   readonly indexType: typeof ZVecIndexType.HNSW;
 
@@ -424,7 +547,7 @@ export interface ZVecHnswQueryParams extends ZVecQueryParams {
  *
  * @group Query Parameters
  */
-export interface ZVecHnswRabitqQueryParams extends ZVecQueryParams {
+export interface ZVecHnswRabitqQueryParams extends ZVecVectorQueryParams {
   /** Must be `ZVecIndexType.HNSW_RABITQ` (4). */
   readonly indexType: typeof ZVecIndexType.HNSW_RABITQ;
 
@@ -441,7 +564,7 @@ export interface ZVecHnswRabitqQueryParams extends ZVecQueryParams {
  *
  * @group Query Parameters
  */
-export interface ZVecIVFQueryParams extends ZVecQueryParams {
+export interface ZVecIVFQueryParams extends ZVecVectorQueryParams {
   /** Must be `ZVecIndexType.IVF` (2). */
   readonly indexType: typeof ZVecIndexType.IVF;
 
@@ -454,10 +577,65 @@ export interface ZVecIVFQueryParams extends ZVecQueryParams {
 
 
 /**
+ * Query-time parameters for searches performed against a DiskANN index.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecDiskAnnQueryParams extends ZVecVectorQueryParams {
+  /** Must be `ZVecIndexType.DISKANN` (5). */
+  readonly indexType: typeof ZVecIndexType.DISKANN;
+
+  /**
+   * Candidate list size used during search. Larger values improve recall but slow down search.
+   * @default 300
+   */
+  readonly listSize?: number;
+}
+
+
+/**
+ * Query-time parameters for full-text search.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecFtsQueryParams extends ZVecQueryParams {
+  /** Must be `ZVecIndexType.FTS` (11). */
+  readonly indexType: typeof ZVecIndexType.FTS;
+
+  /**
+   * Default boolean operator for adjacent bare terms. Supported values are "AND" and "OR"; empty string uses OR.
+   * @default ""
+   */
+  readonly defaultOperator?: string;
+}
+
+
+/**
+ * Full-text search clause. Provide exactly one of `queryString` or `matchString`.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecFtsQuery {
+  /**
+   * Query parser expression.
+   * @default undefined
+   */
+  readonly queryString?: string;
+
+  /**
+   * Literal match string.
+   * @default undefined
+   */
+  readonly matchString?: string;
+}
+
+
+/**
  * Query object used to perform searches against a collection.
  *
  * You can use it for:
  * - Vector similarity search: provide both `fieldName` and `vector`.
+ * - Full-text search: provide both `fieldName` and `fts`.
  * - Scalar-only filtering: provide only `filter`.
  * - Hybrid search: provide `fieldName` + `vector` along with a scalar `filter`.
  *
@@ -482,6 +660,12 @@ export interface ZVecQuery {
   vector?: ZVecVector;
 
   /**
+   * Full-text search clause. Cannot be combined with `vector` in the same query.
+   * @default undefined
+   */
+  fts?: ZVecFtsQuery;
+
+  /**
    * Boolean expression to pre-filter candidates.
    * @default undefined
    */
@@ -503,7 +687,12 @@ export interface ZVecQuery {
    * Query-time parameters to fine-tune search behavior.
    * @default undefined
    */
-  params?: ZVecHnswQueryParams | ZVecHnswRabitqQueryParams | ZVecIVFQueryParams;
+  params?:
+  | ZVecHnswQueryParams
+  | ZVecHnswRabitqQueryParams
+  | ZVecIVFQueryParams
+  | ZVecDiskAnnQueryParams
+  | ZVecFtsQueryParams;
 }
 
 
@@ -667,10 +856,10 @@ export interface ZVecFieldSchema {
   readonly nullable?: boolean;
 
   /**
-   * Optional inverted index parameters for this field.
+   * Optional scalar index parameters for this field.
    * @default undefined
    */
-  readonly indexParams?: ZVecInvertIndexParams;
+  readonly indexParams?: ZVecInvertIndexParams | ZVecFtsIndexParams;
 }
 
 
@@ -700,7 +889,12 @@ export interface ZVecVectorSchema {
    * Vector index parameters for this vector field.
    * @default undefined
    */
-  readonly indexParams?: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecHnswRabitqIndexParams | ZVecIVFIndexParams;
+  readonly indexParams?:
+  | ZVecFlatIndexParams
+  | ZVecHnswIndexParams
+  | ZVecHnswRabitqIndexParams
+  | ZVecIVFIndexParams
+  | ZVecDiskAnnIndexParams;
 }
 
 
@@ -712,14 +906,14 @@ export interface ZVecVectorSchema {
 export declare class ZVecCollectionSchema {
   /**
    * Creates a new collection schema.
-   * @param params - An object containing the name, vectors, and optional fields.
+   * @param params - An object containing the collection name, vector fields, and scalar fields.
    * @param params.name - The name of the collection.
-   * @param params.vectors - An array of vector schemas, or a single vector schema object.
+   * @param params.vectors - An optional array of vector schemas, or a single vector schema object.
    * @param params.fields - An optional array of scalar field schemas, or a single scalar field schema object.
    */
   constructor(params: {
     name: string;
-    vectors: ZVecVectorSchema[] | ZVecVectorSchema;
+    vectors?: ZVecVectorSchema[] | ZVecVectorSchema;
     fields?: ZVecFieldSchema[] | ZVecFieldSchema;
   });
 
@@ -932,10 +1126,17 @@ export declare class ZVecCollection {
 
   /**
    * Fetches documents by their IDs.
-   * @param ids - A single document ID or an array of document IDs to fetch.
+   * @param params - Fetch parameters.
+   * @param params.ids - A single document ID or an array of document IDs to fetch.
+   * @param params.outputFields - Scalar fields to include. If undefined, all scalar fields are returned. An empty array returns no scalar fields.
+   * @param params.includeVector - Whether to include vector data in fetched documents. Defaults to true.
    * @returns An object mapping the requested IDs to their corresponding documents. If an ID is not found, it will not be present in the returned object.
    */
-  fetchSync(ids: string | string[]): Record<string, ZVecDoc>;
+  fetchSync(params: {
+    ids: string | string[];
+    outputFields?: string[];
+    includeVector?: boolean;
+  }): Record<string, ZVecDoc>;
 
   /**
    * Optimizes the collection's internal structures for better performance.
@@ -1015,7 +1216,14 @@ export declare class ZVecCollection {
    */
   createIndexSync(params: {
     fieldName: string;
-    indexParams: ZVecFlatIndexParams | ZVecHnswIndexParams | ZVecHnswRabitqIndexParams | ZVecIVFIndexParams | ZVecInvertIndexParams;
+    indexParams:
+    | ZVecFlatIndexParams
+    | ZVecHnswIndexParams
+    | ZVecHnswRabitqIndexParams
+    | ZVecIVFIndexParams
+    | ZVecDiskAnnIndexParams
+    | ZVecInvertIndexParams
+    | ZVecFtsIndexParams;
     indexOptions?: ZVecCreateIndexOptions;
   }): void;
 
@@ -1045,13 +1253,13 @@ export function ZVecCreateAndOpen(
 
 
 /**
-  * Opens an existing Zvec collection.
-  * @param path - The file system path where the collection is stored.
-  * @param options - Optional parameters for opening the collection.
-  * @returns An instance of ZVecCollection.
-  *
-  * @group Collection
-  */
+ * Opens an existing Zvec collection.
+ * @param path - The file system path where the collection is stored.
+ * @param options - Optional parameters for opening the collection.
+ * @returns An instance of ZVecCollection.
+ *
+ * @group Collection
+ */
 export function ZVecOpen(
   path: string,
   options?: ZVecCollectionOptions
@@ -1067,6 +1275,8 @@ declare const _default: {
   ZVecLogLevel: typeof ZVecLogLevel;
   ZVecCollectionSchema: typeof ZVecCollectionSchema;
   ZVecInitialize: typeof ZVecInitialize;
+  ZVecSetDefaultJiebaDictDir: typeof ZVecSetDefaultJiebaDictDir;
+  ZVecGetDefaultJiebaDictDir: typeof ZVecGetDefaultJiebaDictDir;
   ZVecCreateAndOpen: typeof ZVecCreateAndOpen;
   ZVecOpen: typeof ZVecOpen;
   isZVecError: typeof isZVecError;
