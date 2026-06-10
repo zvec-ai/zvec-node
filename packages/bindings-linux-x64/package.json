@@ -10,6 +10,7 @@
   ],
   "main": "zvec_node_binding.node",
   "files": [
-    "zvec_node_binding.node"
+    "zvec_node_binding.node",
+    "libzvec_diskann_plugin.so"
   ]
 }

@@ -31,7 +31,7 @@ void DeleteByFilterWorker::OnError(const Napi::Error &error) {
 
 QueryWorker::QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
                          zvec::CollectionSchema::Ptr schema,
-                         zvec::VectorQuery query,
+                         zvec::SearchQuery query,
                          Napi::Promise::Deferred deferred)
     : Napi::AsyncWorker(env),
       collection_(collection),

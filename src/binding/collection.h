@@ -2,7 +2,7 @@
 
 
 #include <napi.h>
-#include "zvec/db/collection.h"
+#include <zvec/db/collection.h>
 #include "addon.h"
 
 

@@ -78,6 +78,8 @@ module.exports = {
   ZVecLogLevel: binding.LogLevel,
   ZVecCollectionSchema: binding.CollectionSchema,
   ZVecInitialize: binding.initialize,
+  ZVecSetDefaultJiebaDictDir: binding.setDefaultJiebaDictDir,
+  ZVecGetDefaultJiebaDictDir: binding.getDefaultJiebaDictDir,
   ZVecCreateAndOpen: binding.createAndOpen,
   ZVecOpen: binding.open,
   isZVecError,

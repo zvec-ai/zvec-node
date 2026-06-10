@@ -56,6 +56,16 @@ try {
   const targetPath = path.join(platformPackageDir, 'zvec_node_binding.node');
   fs.copyFileSync(binaryPath, targetPath);
 
+  // DiskANN currently ships as a runtime-loaded plugin. Keep it next to the
+  // addon binary so the C++ engine can auto-load it when DiskANN is used.
+  const diskAnnPluginPath = path.join(BUILD_TARGET_DIR, 'libzvec_diskann_plugin.so');
+  if (fs.existsSync(diskAnnPluginPath)) {
+    fs.copyFileSync(
+      diskAnnPluginPath,
+      path.join(platformPackageDir, 'libzvec_diskann_plugin.so')
+    );
+  }
+
   console.log(`✅ Binary compiled and packaged for ${platformPackageName} at: ${targetPath}`);
 } catch (error) {
   console.error('❌ Error during build and packaging:', error.message);

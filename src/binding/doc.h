@@ -2,7 +2,7 @@
 
 
 #include <napi.h>
-#include "zvec/db/doc.h"
+#include <zvec/db/doc.h>
 
 
 namespace binding {

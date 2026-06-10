@@ -1,14 +1,17 @@
 export {
-  isZVecError, ZVecCollectionSchema,
+  isZVecError,
+  ZVecCollectionSchema,
   ZVecCreateAndOpen,
   ZVecDataType,
+  ZVecGetDefaultJiebaDictDir,
   ZVecIndexType,
   ZVecInitialize,
   ZVecLogLevel,
   ZVecLogType,
   ZVecMetricType,
   ZVecOpen,
-  ZVecQuantizeType
+  ZVecQuantizeType,
+  ZVecSetDefaultJiebaDictDir
 } from './index.js';
 
 export type {
@@ -17,18 +20,26 @@ export type {
   ZVecCollection,
   ZVecCollectionOptions,
   ZVecCreateIndexOptions,
+  ZVecDiskAnnIndexParams,
+  ZVecDiskAnnQueryParams,
   ZVecDoc,
   ZVecDocInput,
   ZVecError,
   ZVecFieldSchema,
   ZVecFlatIndexParams,
+  ZVecFtsIndexParams,
+  ZVecFtsQuery,
+  ZVecFtsQueryParams,
   ZVecHnswIndexParams,
   ZVecHnswQueryParams,
   ZVecHnswRabitqIndexParams,
-  ZVecHnswRabitqQueryParams, ZVecIndexParams,
+  ZVecHnswRabitqQueryParams,
+  ZVecIndexParams,
   ZVecInitOptions,
-  ZVecInvertIndexParams, ZVecIVFIndexParams,
-  ZVecIVFQueryParams, ZVecOptimizeOptions,
+  ZVecInvertIndexParams,
+  ZVecIVFIndexParams,
+  ZVecIVFQueryParams,
+  ZVecOptimizeOptions,
   ZVecQuery,
   ZVecQueryParams,
   ZVecStatus,
@@ -45,9 +56,10 @@ declare const _default: {
   ZVecLogLevel: typeof import('./index.js').ZVecLogLevel;
   ZVecCollectionSchema: typeof import('./index.js').ZVecCollectionSchema;
   ZVecInitialize: typeof import('./index.js').ZVecInitialize;
+  ZVecSetDefaultJiebaDictDir: typeof import('./index.js').ZVecSetDefaultJiebaDictDir;
+  ZVecGetDefaultJiebaDictDir: typeof import('./index.js').ZVecGetDefaultJiebaDictDir;
   ZVecCreateAndOpen: typeof import('./index.js').ZVecCreateAndOpen;
   ZVecOpen: typeof import('./index.js').ZVecOpen;
   isZVecError: typeof import('./index.js').isZVecError;
 };
 export default _default;
-

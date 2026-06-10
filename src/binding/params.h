@@ -2,10 +2,10 @@
 
 
 #include <napi.h>
-#include "zvec/db/doc.h"
-#include "zvec/db/index_params.h"
-#include "zvec/db/options.h"
-#include "zvec/db/status.h"
+#include <zvec/db/index_params.h>
+#include <zvec/db/options.h>
+#include <zvec/db/query.h>
+#include <zvec/db/status.h>
 
 
 namespace binding {
@@ -28,36 +28,49 @@ zvec::Result<zvec::HnswIndexParams::OPtr> ParseHnswIndexParams(
 Napi::Object CreateHnswIndexParams(Napi::Env env,
                                    zvec::IndexParams::Ptr params);
 
-zvec::Result<zvec::IVFIndexParams::OPtr> ParseIVFIndexParams(
-    const Napi::Object &obj);
-
-Napi::Object CreateIVFIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
-
 zvec::Result<zvec::HnswRabitqIndexParams::OPtr> ParseHnswRabitqIndexParams(
     const Napi::Object &obj);
 
 Napi::Object CreateHnswRabitqIndexParams(Napi::Env env,
                                          zvec::IndexParams::Ptr params);
 
+zvec::Result<zvec::IVFIndexParams::OPtr> ParseIVFIndexParams(
+    const Napi::Object &obj);
+
+Napi::Object CreateIVFIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
+
+zvec::Result<zvec::DiskAnnIndexParams::OPtr> ParseDiskAnnIndexParams(
+    const Napi::Object &obj);
+
+Napi::Object CreateDiskAnnIndexParams(Napi::Env env,
+                                      zvec::IndexParams::Ptr params);
+
 zvec::Result<zvec::InvertIndexParams::OPtr> ParseInvertIndexParams(
     const Napi::Object &obj);
 
 Napi::Object CreateInvertIndexParams(Napi::Env env,
                                      zvec::IndexParams::Ptr params);
+
+zvec::Result<std::shared_ptr<zvec::FtsIndexParams>> ParseFtsIndexParams(
+    const Napi::Object &obj);
+
+Napi::Object CreateFtsIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
 /*** Index Parameters  ***/
 
 
 /*** Query Parameters  ***/
-zvec::Result<zvec::VectorQuery> ParseVectorQuery(
+zvec::Result<zvec::SearchQuery> ParseSearchQuery(
     const Napi::Value &value, zvec::CollectionSchema::Ptr schema);
 
 zvec::Status ParseVectorToString(const Napi::Value &value,
                                  zvec::FieldSchema *schema,
-                                 zvec::VectorQuery *query);
+                                 zvec::SearchQuery *query);
 
 zvec::Status ParseVectorToMap(const Napi::Value &value,
                               zvec::FieldSchema *schema,
-                              zvec::VectorQuery *query);
+                              zvec::SearchQuery *query);
+
+zvec::Result<zvec::FtsClause> ParseFtsClause(const Napi::Value &value);
 
 zvec::Result<zvec::QueryParams::Ptr> ParseQueryParams(const Napi::Value &value);
 
@@ -67,10 +80,16 @@ zvec::Result<zvec::FlatQueryParams::Ptr> ParseFlatQueryParams(
 zvec::Result<zvec::HnswQueryParams::Ptr> ParseHnswQueryParams(
     const Napi::Object &obj);
 
+zvec::Result<zvec::HnswRabitqQueryParams::Ptr> ParseHnswRabitqQueryParams(
+    const Napi::Object &obj);
+
 zvec::Result<zvec::IVFQueryParams::Ptr> ParseIVFQueryParams(
     const Napi::Object &obj);
 
-zvec::Result<zvec::HnswRabitqQueryParams::Ptr> ParseHnswRabitqQueryParams(
+zvec::Result<zvec::DiskAnnQueryParams::Ptr> ParseDiskAnnQueryParams(
+    const Napi::Object &obj);
+
+zvec::Result<zvec::FtsQueryParams::Ptr> ParseFtsQueryParams(
     const Napi::Object &obj);
 /*** Query Parameters  ***/
 
