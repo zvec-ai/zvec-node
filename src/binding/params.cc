@@ -1,4 +1,5 @@
 #include "params.h"
+#include <algorithm>
 #include "types.h"
 
 
@@ -497,140 +498,11 @@ Napi::Object CreateFtsIndexParams(Napi::Env env,
 }
 
 
-zvec::Result<zvec::SearchQuery> ParseSearchQuery(
-    const Napi::Value &value, zvec::CollectionSchema::Ptr schema) {
-  if (!value.IsObject()) {
-    return tl::make_unexpected(
-        zvec::Status::InvalidArgument("Expected an object for Query"));
-  }
-
-  zvec::SearchQuery query{};
-  query.topk_ = 10;
-  auto obj = value.As<Napi::Object>();
-  zvec::FieldSchema *field_schema{nullptr};
-
-  if (obj.Has("fieldName")) {
-    if (obj.Get("fieldName").IsString()) {
-      query.target_.field_name_ =
-          obj.Get("fieldName").As<Napi::String>().Utf8Value();
-      field_schema = schema->get_field(query.target_.field_name_);
-      if (!field_schema) {
-        return tl::make_unexpected(
-            zvec::Status::InvalidArgument("'", query.target_.field_name_,
-                                          "' not found in collection schema"));
-      }
-    } else {
-      return tl::make_unexpected(zvec::Status::InvalidArgument(
-          "Expected a string for 'fieldName' in Query"));
-    }
-  }
-
-  if (obj.Has("topk")) {
-    if (obj.Get("topk").IsNumber()) {
-      query.topk_ = obj.Get("topk").As<Napi::Number>().Int32Value();
-    } else {
-      return tl::make_unexpected(
-          zvec::Status::InvalidArgument("Expected a number for 'topk'"));
-    }
-  }
-
-  const bool has_vector = obj.Has("vector") &&
-                          !obj.Get("vector").IsUndefined() &&
-                          !obj.Get("vector").IsNull();
-  const bool has_fts = obj.Has("fts") && !obj.Get("fts").IsUndefined() &&
-                       !obj.Get("fts").IsNull();
-
-  if (has_vector && has_fts) {
-    return tl::make_unexpected(zvec::Status::InvalidArgument(
-        "Cannot combine 'vector' and 'fts' in a single Query"));
-  }
-
-  if (has_vector) {
-    if (!field_schema) {
-      return tl::make_unexpected(zvec::Status::InvalidArgument(
-          "A vector name must be provided when performing vector queries"));
-    }
-    auto vector = obj.Get("vector");
-    if (field_schema->is_dense_vector()) {
-      if (auto s = ParseVectorToString(vector, field_schema, &query); !s.ok()) {
-        return tl::make_unexpected(s);
-      }
-    } else if (field_schema->is_sparse_vector()) {
-      if (auto s = ParseVectorToMap(vector, field_schema, &query); !s.ok()) {
-        return tl::make_unexpected(s);
-      }
-    } else {
-      return tl::make_unexpected(
-          zvec::Status::InvalidArgument("Field '", query.target_.field_name_,
-                                        "' is not a vector field and cannot be "
-                                        "queried using vector operations."));
-    }
-  } else if (has_fts) {
-    if (!field_schema) {
-      return tl::make_unexpected(zvec::Status::InvalidArgument(
-          "A field name must be provided when performing FTS queries"));
-    }
-    auto parsed_fts = ParseFtsClause(obj.Get("fts"));
-    if (parsed_fts) {
-      query.target_.clause_ = std::move(parsed_fts.value());
-    } else {
-      return tl::make_unexpected(parsed_fts.error());
-    }
-  } else if (field_schema) {
-    return tl::make_unexpected(zvec::Status::InvalidArgument(
-        "A vector or FTS clause must be provided when 'fieldName' is set"));
-  }
-
-  if (obj.Has("params")) {
-    auto parsed_params = ParseQueryParams(obj.Get("params"));
-    if (parsed_params) {
-      query.target_.query_params_ = parsed_params.value();
-    } else {
-      return tl::make_unexpected(parsed_params.error());
-    }
-  }
-  if (obj.Has("filter")) {
-    if (obj.Get("filter").IsString()) {
-      query.filter_ = obj.Get("filter").As<Napi::String>().Utf8Value();
-    } else {
-      return tl::make_unexpected(
-          zvec::Status::InvalidArgument("Expected a string for 'filter'"));
-    }
-  }
-  if (obj.Has("includeVector")) {
-    if (obj.Get("includeVector").IsBoolean()) {
-      query.include_vector_ = obj.Get("includeVector").As<Napi::Boolean>();
-    } else {
-      return tl::make_unexpected(zvec::Status::InvalidArgument(
-          "Expected a boolean for 'includeVector'"));
-    }
-  }
-  if (obj.Has("outputFields")) {
-    if (obj.Get("outputFields").IsArray()) {
-      std::vector<std::string> output_fields{};
-      Napi::Array array = obj.Get("outputFields").As<Napi::Array>();
-      for (uint32_t i = 0; i < array.Length(); i++) {
-        if (array.Get(i).IsString()) {
-          output_fields.push_back(array.Get(i).As<Napi::String>().Utf8Value());
-        } else {
-          return tl::make_unexpected(zvec::Status::InvalidArgument(
-              "Expected an array of strings for 'outputFields'"));
-        }
-      }
-      query.output_fields_ = output_fields;
-    } else {
-      return tl::make_unexpected(zvec::Status::InvalidArgument(
-          "Expected an array of strings for 'outputFields'"));
-    }
-  }
-
-  return query;
-}
-
+namespace {
 
 zvec::Status ParseVectorToString(const Napi::Value &value,
                                  zvec::FieldSchema *schema,
-                                 zvec::SearchQuery *query) {
+                                 zvec::QueryTarget *target) {
   if (value.IsTypedArray()) {
     auto array = value.As<Napi::TypedArray>();
     auto ta_type = array.TypedArrayType();
@@ -650,7 +522,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
           std::memcpy(buf.data() + (i * sizeof(uint16_t)), &val,
                       sizeof(uint16_t));
         }
-        query->target_.set_vector(std::move(buf));
+        target->set_vector(std::move(buf));
         break;
       }
       case zvec::DataType::VECTOR_FP32: {
@@ -663,7 +535,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
         std::string buf;
         buf.resize(ta_length * sizeof(float));
         std::memcpy(buf.data(), float32Array.Data(), ta_length * sizeof(float));
-        query->target_.set_vector(std::move(buf));
+        target->set_vector(std::move(buf));
         break;
       }
       case zvec::DataType::VECTOR_INT8: {
@@ -675,7 +547,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
         std::string buf;
         buf.resize(ta_length * sizeof(int8_t));
         std::memcpy(buf.data(), int8Array.Data(), ta_length * sizeof(int8_t));
-        query->target_.set_vector(std::move(buf));
+        target->set_vector(std::move(buf));
         break;
       }
       default: {
@@ -702,7 +574,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
                 "' must be numbers");
           }
         }
-        query->target_.set_vector(std::move(buf));
+        target->set_vector(std::move(buf));
         break;
       }
       case zvec::DataType::VECTOR_FP32: {
@@ -719,7 +591,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
                 "' must be numbers");
           }
         }
-        query->target_.set_vector(std::move(buf));
+        target->set_vector(std::move(buf));
         break;
       }
       case zvec::DataType::VECTOR_INT8: {
@@ -737,7 +609,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
                 "' must be numbers");
           }
         }
-        query->target_.set_vector(std::move(buf));
+        target->set_vector(std::move(buf));
         break;
       }
       default: {
@@ -756,7 +628,7 @@ zvec::Status ParseVectorToString(const Napi::Value &value,
 
 zvec::Status ParseVectorToMap(const Napi::Value &value,
                               zvec::FieldSchema *schema,
-                              zvec::SearchQuery *query) {
+                              zvec::QueryTarget *target) {
   if (!value.IsObject()) {
     return zvec::Status::InvalidArgument("Expected sparse vector[",
                                          schema->name(), "] to be an object");
@@ -797,7 +669,7 @@ zvec::Status ParseVectorToMap(const Napi::Value &value,
         indices_ptr[i] = index;
         values_ptr[i] = vectorValue.As<Napi::Number>().FloatValue();
       }
-      query->target_.set_sparse_vector(std::move(indices), std::move(values));
+      target->set_sparse_vector(std::move(indices), std::move(values));
       break;
     }
     case zvec::DataType::SPARSE_VECTOR_FP16: {
@@ -831,7 +703,7 @@ zvec::Status ParseVectorToMap(const Napi::Value &value,
         zvec::ailego::Float16 val = vectorValue.As<Napi::Number>().FloatValue();
         values_ptr[i] = val;
       }
-      query->target_.set_sparse_vector(std::move(indices), std::move(values));
+      target->set_sparse_vector(std::move(indices), std::move(values));
       break;
     }
     default: {
@@ -848,6 +720,7 @@ zvec::Result<zvec::FtsClause> ParseFtsClause(const Napi::Value &value) {
     return tl::make_unexpected(
         zvec::Status::InvalidArgument("Expected an object for 'fts'"));
   }
+
   auto obj = value.As<Napi::Object>();
   zvec::FtsClause fts_clause{};
   if (obj.Has("queryString")) {
@@ -867,6 +740,285 @@ zvec::Result<zvec::FtsClause> ParseFtsClause(const Napi::Value &value) {
         obj.Get("matchString").As<Napi::String>().Utf8Value();
   }
   return fts_clause;
+}
+
+
+zvec::Result<zvec::QueryTarget> ParseQueryTarget(
+    const Napi::Object &obj, zvec::CollectionSchema::Ptr schema) {
+  zvec::QueryTarget target{};
+  zvec::FieldSchema *field_schema{nullptr};
+
+  if (obj.Has("fieldName")) {
+    if (obj.Get("fieldName").IsString()) {
+      target.field_name_ = obj.Get("fieldName").As<Napi::String>().Utf8Value();
+      field_schema = schema->get_field(target.field_name_);
+    } else {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a string for 'fieldName' in Query"));
+    }
+  }
+
+  const bool has_vector = obj.Has("vector") &&
+                          !obj.Get("vector").IsUndefined() &&
+                          !obj.Get("vector").IsNull();
+  const bool has_fts = obj.Has("fts") && !obj.Get("fts").IsUndefined() &&
+                       !obj.Get("fts").IsNull();
+
+  if (has_vector && has_fts) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Cannot combine 'vector' and 'fts' in a single Query"));
+  }
+
+  if (has_vector) {
+    if (!field_schema) {
+      if (target.field_name_.empty()) {
+        return tl::make_unexpected(zvec::Status::InvalidArgument(
+            "Missing required 'fieldName' when performing vector queries"));
+      }
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Field '", target.field_name_, "' not found in collection schema"));
+    }
+    auto vector = obj.Get("vector");
+    if (field_schema->is_dense_vector()) {
+      if (auto s = ParseVectorToString(vector, field_schema, &target);
+          !s.ok()) {
+        return tl::make_unexpected(s);
+      }
+    } else if (field_schema->is_sparse_vector()) {
+      if (auto s = ParseVectorToMap(vector, field_schema, &target); !s.ok()) {
+        return tl::make_unexpected(s);
+      }
+    } else {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Field '", target.field_name_,
+                                        "' is not a vector field and cannot be "
+                                        "queried using vector operations."));
+    }
+  } else if (has_fts) {
+    auto parsed_fts = ParseFtsClause(obj.Get("fts"));
+    if (parsed_fts) {
+      target.clause_ = std::move(parsed_fts.value());
+    } else {
+      return tl::make_unexpected(parsed_fts.error());
+    }
+  }
+
+  if (obj.Has("params")) {
+    auto parsed_params = ParseQueryParams(obj.Get("params"));
+    if (parsed_params) {
+      target.query_params_ = parsed_params.value();
+    } else {
+      return tl::make_unexpected(parsed_params.error());
+    }
+  }
+
+  return target;
+}
+
+
+zvec::Status ParseCommonQueryOptions(
+    const Napi::Object &obj, int *topk, std::string *filter,
+    bool *include_vector,
+    std::optional<std::vector<std::string>> *output_fields) {
+  if (obj.Has("topk")) {
+    if (obj.Get("topk").IsNumber()) {
+      *topk = obj.Get("topk").As<Napi::Number>().Int32Value();
+    } else {
+      return zvec::Status::InvalidArgument("Expected a number for 'topk'");
+    }
+  }
+  if (obj.Has("filter")) {
+    if (obj.Get("filter").IsString()) {
+      *filter = obj.Get("filter").As<Napi::String>().Utf8Value();
+    } else {
+      return zvec::Status::InvalidArgument("Expected a string for 'filter'");
+    }
+  }
+  if (obj.Has("includeVector")) {
+    if (obj.Get("includeVector").IsBoolean()) {
+      *include_vector = obj.Get("includeVector").As<Napi::Boolean>().Value();
+    } else {
+      return zvec::Status::InvalidArgument(
+          "Expected a boolean for 'includeVector'");
+    }
+  }
+  if (obj.Has("outputFields")) {
+    if (!obj.Get("outputFields").IsArray()) {
+      return zvec::Status::InvalidArgument(
+          "Expected an array of strings for 'outputFields'");
+    }
+    std::vector<std::string> parsed_output_fields{};
+    auto array = obj.Get("outputFields").As<Napi::Array>();
+    for (uint32_t i = 0; i < array.Length(); i++) {
+      if (!array.Get(i).IsString()) {
+        return zvec::Status::InvalidArgument(
+            "Expected an array of strings for 'outputFields'");
+      }
+      parsed_output_fields.push_back(
+          array.Get(i).As<Napi::String>().Utf8Value());
+    }
+    *output_fields = std::move(parsed_output_fields);
+  }
+  return zvec::Status::OK();
+}
+
+
+zvec::Result<zvec::reranker::RerankParams> ParseRerankParams(
+    const Napi::Value &value) {
+  if (!value.IsObject()) {
+    return tl::make_unexpected(
+        zvec::Status::InvalidArgument("Expected an object for 'rerank'"));
+  }
+
+  auto obj = value.As<Napi::Object>();
+  if (!obj.Has("type") || !obj.Get("type").IsString()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected a string for 'type' in 'rerank'"));
+  }
+  std::string type = obj.Get("type").As<Napi::String>().Utf8Value();
+
+  if (type == "rrf") {
+    int rank_constant{60};
+    if (obj.Has("rankConstant")) {
+      if (!obj.Get("rankConstant").IsNumber()) {
+        return tl::make_unexpected(zvec::Status::InvalidArgument(
+            "Expected a number for 'rankConstant' in 'rerank'"));
+      }
+      rank_constant = obj.Get("rankConstant").As<Napi::Number>().Int32Value();
+    }
+    return zvec::reranker::RrfParams{rank_constant};
+  }
+
+  if (type == "weighted") {
+    if (!obj.Has("weights") || !obj.Get("weights").IsArray()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected an array of numbers for 'weights' in weighted rerank"));
+    }
+
+    std::vector<double> weights{};
+    auto weights_array = obj.Get("weights").As<Napi::Array>();
+    for (uint32_t i = 0; i < weights_array.Length(); i++) {
+      if (!weights_array.Get(i).IsNumber()) {
+        return tl::make_unexpected(zvec::Status::InvalidArgument(
+            "Expected an array of numbers for 'weights' in weighted rerank"));
+      }
+      weights.push_back(weights_array.Get(i).As<Napi::Number>().DoubleValue());
+    }
+    return zvec::reranker::WeightedParams{std::move(weights)};
+  }
+
+  return tl::make_unexpected(zvec::Status::InvalidArgument(
+      "Unsupported rerank type '", type, "'. Expected 'rrf' or 'weighted'"));
+}
+
+}  // namespace
+
+
+zvec::Result<zvec::SearchQuery> ParseSearchQuery(
+    const Napi::Value &value, zvec::CollectionSchema::Ptr schema) {
+  if (!value.IsObject()) {
+    return tl::make_unexpected(
+        zvec::Status::InvalidArgument("Expected an object for Query"));
+  }
+
+  zvec::SearchQuery query{};
+  query.topk_ = 10;
+  auto obj = value.As<Napi::Object>();
+
+  if (auto s = ParseCommonQueryOptions(obj, &query.topk_, &query.filter_,
+                                       &query.include_vector_,
+                                       &query.output_fields_);
+      !s.ok()) {
+    return tl::make_unexpected(s);
+  }
+
+  auto parsed_target = ParseQueryTarget(obj, schema);
+  if (parsed_target) {
+    query.target_ = std::move(parsed_target.value());
+  } else {
+    return tl::make_unexpected(parsed_target.error());
+  }
+
+  return query;
+}
+
+
+zvec::Result<zvec::MultiQuery> ParseMultiQuery(
+    const Napi::Value &value, zvec::CollectionSchema::Ptr schema) {
+  if (!value.IsObject()) {
+    return tl::make_unexpected(
+        zvec::Status::InvalidArgument("Expected an object for MultiQuery"));
+  }
+
+  zvec::MultiQuery query{};
+  query.topk = 10;
+  auto obj = value.As<Napi::Object>();
+
+  if (auto s =
+          ParseCommonQueryOptions(obj, &query.topk, &query.filter,
+                                  &query.include_vector, &query.output_fields);
+      !s.ok()) {
+    return tl::make_unexpected(s);
+  }
+
+  if (!obj.Has("queries") || !obj.Get("queries").IsArray()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected an array of sub-queries for 'queries'"));
+  }
+
+  const int default_num_candidates = std::max(query.topk, 10);
+  const auto parse_sub_query =
+      [&](const Napi::Value &sub_query_value,
+          uint32_t index) -> zvec::Result<zvec::SubQuery> {
+    if (!sub_query_value.IsObject()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected an object for sub-query at index ", index,
+          " in 'queries' array"));
+    }
+    auto sub_query_obj = sub_query_value.As<Napi::Object>();
+    auto parsed_target = ParseQueryTarget(sub_query_obj, schema);
+    if (!parsed_target) {
+      return tl::make_unexpected(parsed_target.error());
+    }
+    zvec::SubQuery sub_query{};
+    sub_query.target_ = std::move(parsed_target.value());
+    sub_query.num_candidates_ = default_num_candidates;
+    if (sub_query_obj.Has("numCandidates")) {
+      if (sub_query_obj.Get("numCandidates").IsNumber()) {
+        sub_query.num_candidates_ =
+            sub_query_obj.Get("numCandidates").As<Napi::Number>().Int32Value();
+      } else {
+        return tl::make_unexpected(zvec::Status::InvalidArgument(
+            "Expected a number for 'numCandidates' in sub-query at index ",
+            index, " in 'queries' array"));
+      }
+    }
+    return sub_query;
+  };
+
+  auto queries = obj.Get("queries").As<Napi::Array>();
+  query.queries.reserve(queries.Length());
+  for (uint32_t i = 0; i < queries.Length(); i++) {
+    auto parsed_sub_query = parse_sub_query(queries.Get(i), i);
+    if (parsed_sub_query) {
+      query.queries.push_back(std::move(parsed_sub_query.value()));
+    } else {
+      return tl::make_unexpected(parsed_sub_query.error());
+    }
+  }
+
+  if (obj.Has("rerank")) {
+    auto rerank = ParseRerankParams(obj.Get("rerank"));
+    if (rerank) {
+      query.rerank = std::move(rerank.value());
+    } else {
+      return tl::make_unexpected(rerank.error());
+    }
+  } else {
+    query.rerank = zvec::reranker::RrfParams{60};
+  }
+
+  return query;
 }
 
 

@@ -57,6 +57,10 @@ class Collection : public Napi::ObjectWrap<Collection> {
 
   Napi::Value QueryAsync(const Napi::CallbackInfo &info);
 
+  Napi::Value MultiQuery(const Napi::CallbackInfo &info);
+
+  Napi::Value MultiQueryAsync(const Napi::CallbackInfo &info);
+
   Napi::Value Fetch(const Napi::CallbackInfo &info);
 
   Napi::Value Optimize(const Napi::CallbackInfo &info);

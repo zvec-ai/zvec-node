@@ -3,6 +3,7 @@
 
 #include <napi.h>
 #include <string>
+#include <variant>
 #include <zvec/db/collection.h>
 #include <zvec/db/status.h>
 
@@ -33,6 +34,10 @@ class QueryWorker : public Napi::AsyncWorker {
               zvec::CollectionSchema::Ptr schema, zvec::SearchQuery query,
               Napi::Promise::Deferred deferred);
 
+  QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
+              zvec::CollectionSchema::Ptr schema, zvec::MultiQuery query,
+              Napi::Promise::Deferred deferred);
+
   void Execute() override;
   void OnOK() override;
   void OnError(const Napi::Error &error) override;
@@ -40,7 +45,7 @@ class QueryWorker : public Napi::AsyncWorker {
  private:
   zvec::Collection::Ptr collection_;
   zvec::CollectionSchema::Ptr schema_;
-  zvec::SearchQuery query_;
+  std::variant<zvec::SearchQuery, zvec::MultiQuery> query_;
   Napi::Promise::Deferred deferred_;
   zvec::Status status_;
   zvec::DocPtrList results_;

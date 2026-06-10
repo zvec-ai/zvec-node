@@ -156,8 +156,10 @@ Napi::Object Collection::Init(Napi::Env env, Napi::Object exports,
           InstanceMethod("deleteSync", &Collection::Delete),
           InstanceMethod("deleteByFilterSync", &Collection::DeleteByFilter),
           InstanceMethod("deleteByFilter", &Collection::DeleteByFilterAsync),
-          InstanceMethod("_internalQuery", &Collection::Query),
-          InstanceMethod("_internalQueryAsync", &Collection::QueryAsync),
+          InstanceMethod("querySync", &Collection::Query),
+          InstanceMethod("query", &Collection::QueryAsync),
+          InstanceMethod("multiQuerySync", &Collection::MultiQuery),
+          InstanceMethod("multiQuery", &Collection::MultiQueryAsync),
           InstanceMethod("fetchSync", &Collection::Fetch),
           InstanceMethod("optimizeSync", &Collection::Optimize),
           InstanceMethod("optimize", &Collection::OptimizeAsync),
@@ -566,8 +568,8 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
   if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 1) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                          "Collection.query(): Expected exactly 1 argument. "
-                          "Argument must be a Query object"));
+                          "Collection.querySync(): Expected exactly 1 "
+                          "argument. Argument must be a Query object"));
     return env.Undefined();
   }
 
@@ -618,6 +620,64 @@ Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
 }
 
 
+Napi::Value Collection::MultiQuery(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  if (info.Length() != 1) {
+    ThrowIfNotOk(
+        env, zvec::Status::InvalidArgument(
+                 "Collection.multiQuerySync(): Expected exactly 1 argument. "
+                 "Argument must be a MultiQuery object"));
+    return env.Undefined();
+  }
+
+  if (auto parsed_query = ParseMultiQuery(info[0], get_wrapped_schema());
+      parsed_query) {
+    auto res = collection_->Query(parsed_query.value());
+    if (res) {
+      Napi::Array array = Napi::Array::New(env);
+      const zvec::DocPtrList &doc_list = res.value();
+      for (size_t i = 0; i < doc_list.size(); i++) {
+        array.Set(i, CreateDoc(env, get_wrapped_schema(), doc_list[i]));
+      }
+      return array;
+    } else {
+      ThrowIfNotOk(env, res.error());
+      return env.Undefined();
+    }
+  } else {
+    ThrowIfNotOk(env, parsed_query.error());
+    return env.Undefined();
+  }
+}
+
+
+Napi::Value Collection::MultiQueryAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
+  if (info.Length() != 1) {
+    RejectIfNotOk(env,
+                  zvec::Status::InvalidArgument(
+                      "Collection.multiQuery(): Expected exactly 1 argument. "
+                      "Argument must be a MultiQuery object"),
+                  deferred);
+    return deferred.Promise();
+  }
+
+  if (auto parsed_query = ParseMultiQuery(info[0], get_wrapped_schema());
+      parsed_query) {
+    auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
+                                   std::move(parsed_query.value()), deferred);
+    worker->Queue();
+    return deferred.Promise();
+  } else {
+    RejectIfNotOk(env, parsed_query.error(), deferred);
+    return deferred.Promise();
+  }
+}
+
+
 Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
@@ -646,8 +706,8 @@ Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
           pks.emplace_back(pkArray.Get(i).As<Napi::String>().Utf8Value());
         } else {
           ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                                "Collection.fetch(): Expected a string or array "
-                                "of strings for 'ids'"));
+                                "Collection.fetch(): Expected a string or "
+                                "array of strings for 'ids'"));
           return false;
         }
       }
@@ -676,8 +736,8 @@ Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
     if (obj.Has("outputFields") && !obj.Get("outputFields").IsUndefined()) {
       if (!obj.Get("outputFields").IsArray()) {
         ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                              "Collection.fetch(): argument 'outputFields' must "
-                              "be an array of strings"));
+                              "Collection.fetch(): argument 'outputFields' "
+                              "must be an array of strings"));
         return env.Undefined();
       }
       std::vector<std::string> fields{};
