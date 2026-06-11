@@ -39,6 +39,7 @@ export type {
   ZVecInvertIndexParams,
   ZVecIVFIndexParams,
   ZVecIVFQueryParams,
+  ZVecMultiQuery,
   ZVecOptimizeOptions,
   ZVecQuery,
   ZVecQueryParams,

@@ -1117,7 +1117,7 @@ export interface ZVecDocInput {
  *
  * @group Collection
  */
-export declare class ZVecCollection {
+export interface ZVecCollection {
   /**
    * Gets the file system path associated with this collection.
    */
@@ -1223,6 +1223,20 @@ export declare class ZVecCollection {
    * @returns A promise that resolves with an array of documents matching the query.
    */
   query(params: ZVecQuery): Promise<ZVecDoc[]>;
+
+  /**
+   * Performs multiple searches against the collection and merges their candidates.
+   * @param params - The multi-query parameters.
+   * @returns An array of documents matching the combined query.
+   */
+  multiQuerySync(params: ZVecMultiQuery): ZVecDoc[];
+
+  /**
+   * Asynchronously performs multiple searches against the collection and merges their candidates.
+   * @param params - The multi-query parameters.
+   * @returns A promise that resolves with an array of documents matching the combined query.
+   */
+  multiQuery(params: ZVecMultiQuery): Promise<ZVecDoc[]>;
 
   /**
    * Fetches documents by their IDs.

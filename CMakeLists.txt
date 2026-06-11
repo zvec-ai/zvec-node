@@ -44,18 +44,20 @@ endif()
 
 # External build byproducts
 if(WIN32)
+    set(ZVEC_DB_LIB ${ZVEC_LIB_DIR}/zvec.lib)
     set(ZVEC_BYPRODUCTS
         ${ZVEC_LIB_DIR}/zvec_ailego.lib
         ${ZVEC_LIB_DIR}/zvec_core.lib
         ${ZVEC_LIB_DIR}/zvec_turbo.lib
-        ${ZVEC_LIB_DIR}/zvec_db.lib
+        ${ZVEC_DB_LIB}
     )
 else()
+    set(ZVEC_DB_LIB ${ZVEC_LIB_DIR}/libzvec.a)
     set(ZVEC_BYPRODUCTS
         ${ZVEC_LIB_DIR}/libzvec_ailego.a
         ${ZVEC_LIB_DIR}/libzvec_core.a
         ${ZVEC_LIB_DIR}/libzvec_turbo.a
-        ${ZVEC_LIB_DIR}/libzvec_db.a
+        ${ZVEC_DB_LIB}
     )
 endif()
 
@@ -66,7 +68,7 @@ set(ZVEC_BUILD_TARGETS
     --target zvec_ailego
     --target zvec_core
     --target zvec_turbo
-    --target zvec_db
+    --target zvec
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
     list(APPEND ZVEC_BUILD_TARGETS --target core_knn_diskann)
@@ -233,11 +235,11 @@ else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-# zvec-db: links libzvec_db.a + all deps
+# zvec-db: links the engine DB static library + all deps.
 add_library(zvec-db INTERFACE)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(zvec-db INTERFACE
-        zvec_db
+        ${ZVEC_DB_LIB}
         zvec-core
         zvec-ailego
         -Wl,--start-group
@@ -246,14 +248,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
 elseif(APPLE)
     target_link_libraries(zvec-db INTERFACE
-        zvec_db
+        ${ZVEC_DB_LIB}
         zvec-core
         zvec-ailego
         ${zvec_db_deps}
     )
 elseif(ANDROID)
     target_link_libraries(zvec-db INTERFACE
-        zvec_db
+        ${ZVEC_DB_LIB}
         zvec-core
         zvec-ailego
         -Wl,--start-group
@@ -262,7 +264,7 @@ elseif(ANDROID)
     )
 elseif(WIN32)
     target_link_libraries(zvec-db INTERFACE
-        zvec_db
+        ${ZVEC_DB_LIB}
         zvec-core
         zvec-ailego
         ${zvec_db_deps}
