@@ -62,15 +62,8 @@ Napi::Object CreateFtsIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
 zvec::Result<zvec::SearchQuery> ParseSearchQuery(
     const Napi::Value &value, zvec::CollectionSchema::Ptr schema);
 
-zvec::Status ParseVectorToString(const Napi::Value &value,
-                                 zvec::FieldSchema *schema,
-                                 zvec::SearchQuery *query);
-
-zvec::Status ParseVectorToMap(const Napi::Value &value,
-                              zvec::FieldSchema *schema,
-                              zvec::SearchQuery *query);
-
-zvec::Result<zvec::FtsClause> ParseFtsClause(const Napi::Value &value);
+zvec::Result<zvec::MultiQuery> ParseMultiQuery(
+    const Napi::Value &value, zvec::CollectionSchema::Ptr schema);
 
 zvec::Result<zvec::QueryParams::Ptr> ParseQueryParams(const Napi::Value &value);
 

@@ -660,7 +660,7 @@ export interface ZVecQuery {
   vector?: ZVecVector;
 
   /**
-   * Full-text search clause. Cannot be combined with `vector` in the same query.
+   * Full-text search clause.
    * @default undefined
    */
   fts?: ZVecFtsQuery;
@@ -693,6 +693,106 @@ export interface ZVecQuery {
   | ZVecIVFQueryParams
   | ZVecDiskAnnQueryParams
   | ZVecFtsQueryParams;
+}
+
+
+interface ZVecSubQuery {
+  /**
+   * The name of the field to search against.
+   */
+  fieldName: string;
+
+  /**
+   * The query vector. Can be a standard JavaScript array, a typed array, or a sparse vector object map.
+   */
+  vector?: ZVecVector;
+
+  /**
+   * Full-text search clause.
+   */
+  fts?: ZVecFtsQuery;
+
+  /**
+   * Number of candidates to retrieve for this sub-query before reranking.
+   * @default max(topk, 10)
+   */
+  numCandidates?: number;
+
+  /**
+   * Query-time parameters to fine-tune search behavior.
+   * @default undefined
+   */
+  params?:
+  | ZVecHnswQueryParams
+  | ZVecHnswRabitqQueryParams
+  | ZVecIVFQueryParams
+  | ZVecDiskAnnQueryParams
+  | ZVecFtsQueryParams;
+}
+
+
+/**
+ * Multi-query object used to combine multiple vector and/or full-text searches.
+ *
+ * Each sub-query contributes candidates, then `rerank` combines them into a
+ * single result list.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecMultiQuery {
+  /**
+   * Sub-queries to execute and merge. At least two are required.
+   */
+  queries: ZVecSubQuery[];
+
+  /**
+   * Number of final documents to return.
+   * @default 10
+   */
+  topk?: number;
+
+  /**
+   * Boolean expression to pre-filter candidates for every sub-query.
+   * @default undefined
+   */
+  filter?: string;
+
+  /**
+   * Whether to include vector data in results.
+   * @default false
+   */
+  includeVector?: boolean;
+
+  /**
+   * Scalar fields to include. If undefined, all fields are returned.
+   * @default undefined
+   */
+  outputFields?: string[];
+
+  /**
+   * Strategy for merging sub-query candidates. If omitted, reciprocal rank
+   * fusion with rank constant 60 is used.
+   */
+  rerank?:
+  | {
+    /** Reciprocal rank fusion. */
+    type: 'rrf';
+
+    /**
+     * RRF rank constant.
+     * @default 60
+     */
+    rankConstant?: number;
+  }
+  | {
+    /** Weighted score fusion. */
+    type: 'weighted';
+
+    /**
+     * Per-sub-query weights. The length must match `queries.length`.
+     */
+    weights: number[];
+  };
 }
 
 

@@ -39,8 +39,22 @@ QueryWorker::QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
       query_(std::move(query)),
       deferred_(deferred) {}
 
+QueryWorker::QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
+                         zvec::CollectionSchema::Ptr schema,
+                         zvec::MultiQuery query,
+                         Napi::Promise::Deferred deferred)
+    : Napi::AsyncWorker(env),
+      collection_(collection),
+      schema_(schema),
+      query_(std::move(query)),
+      deferred_(deferred) {}
+
 void QueryWorker::Execute() {
-  auto res = collection_->Query(query_);
+  auto res = std::visit(
+      [this](const auto &query) -> zvec::Result<zvec::DocPtrList> {
+        return collection_->Query(query);
+      },
+      query_);
   if (res) {
     results_ = std::move(res.value());
   } else {

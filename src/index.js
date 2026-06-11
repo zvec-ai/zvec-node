@@ -22,42 +22,6 @@ try {
 }
 
 
-function validateQueryArg(methodName, queryObj, argCount) {
-  if (argCount !== 1) {
-    const err = new Error(`Collection.${methodName}(): Expected exactly 1 argument. Argument must be an Query object`);
-    err.name = "InvalidArgumentError";
-    err.code = "ZVEC_INVALID_ARGUMENT";
-    throw err;
-  }
-  if (queryObj === null || typeof queryObj !== 'object') {
-    const err = new Error(`Collection.${methodName}(): Expected exactly 1 argument. Argument must be an Query object`);
-    err.name = "InvalidArgumentError";
-    err.code = "ZVEC_INVALID_ARGUMENT";
-    throw err;
-  }
-  if ('vectors' in queryObj) {
-    const err = new Error("MultiQuery functionality has not been implemented yet.");
-    err.name = "NotSupportedError";
-    err.code = "ZVEC_NOT_SUPPORTED";
-    throw err;
-  }
-}
-
-binding.Collection.prototype.querySync = function (queryObj) {
-  validateQueryArg('querySync', queryObj, arguments.length);
-  return this._internalQuery(queryObj);
-};
-
-binding.Collection.prototype.query = function (queryObj) {
-  try {
-    validateQueryArg('query', queryObj, arguments.length);
-  } catch (err) {
-    return Promise.reject(err);
-  }
-  return this._internalQueryAsync(queryObj);
-};
-
-
 function isZVecError(error) {
   return (
     typeof error === "object" &&
