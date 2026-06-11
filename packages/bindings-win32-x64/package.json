@@ -10,6 +10,8 @@
   ],
   "main": "zvec_node_binding.node",
   "files": [
-    "zvec_node_binding.node"
+    "zvec_node_binding.node",
+    "jieba_dict/jieba.dict.utf8",
+    "jieba_dict/hmm_model.utf8"
   ]
 }

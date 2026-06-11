@@ -56,6 +56,17 @@ try {
   const targetPath = path.join(platformPackageDir, 'zvec_node_binding.node');
   fs.copyFileSync(binaryPath, targetPath);
 
+  // CMake stages jieba_dict next to the addon; keep that runtime layout in the
+  // platform package so the JS wrapper can register it on load.
+  const jiebaDictPath = path.join(BUILD_TARGET_DIR, 'jieba_dict');
+  if (!fs.existsSync(jiebaDictPath)) {
+    throw new Error(`Jieba dictionary directory not found at ${jiebaDictPath}`);
+  }
+  fs.cpSync(jiebaDictPath, path.join(platformPackageDir, 'jieba_dict'), {
+    recursive: true,
+    force: true
+  });
+
   // DiskANN currently ships as a runtime-loaded plugin. Keep it next to the
   // addon binary so the C++ engine can auto-load it when DiskANN is used.
   const diskAnnPluginPath = path.join(BUILD_TARGET_DIR, 'libzvec_diskann_plugin.so');

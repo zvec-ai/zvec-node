@@ -25,14 +25,20 @@ function publish(packageName, version, packageDir) {
 try {
   // Path variables
   const PACKAGE_ROOT = path.resolve(__dirname, '..');
-  const binaryPath = path.join(PACKAGE_ROOT, 'zvec_node_binding.node');
   const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
-  if (fs.existsSync(binaryPath)) {
-    console.warn(`⚠️ Found stray binary: ${binaryPath}`);
-    fs.unlinkSync(binaryPath);
-    console.log(`✅ Binary ${binaryPath} removed to prevent accidental inclusion in the generic package...`);
+  for (const runtimeAsset of [
+    'zvec_node_binding.node',
+    'libzvec_diskann_plugin.so',
+    'jieba_dict'
+  ]) {
+    const generatedPath = path.join(PACKAGE_ROOT, runtimeAsset);
+    if (fs.existsSync(generatedPath)) {
+      console.warn(`⚠️ Found stray runtime asset: ${generatedPath}`);
+      fs.rmSync(generatedPath, { recursive: true, force: true });
+      console.log(`✅ Removed ${generatedPath} to prevent accidental inclusion in the generic package...`);
+    }
   }
 
   if (shouldForce) {

@@ -42,6 +42,8 @@
     "src/index.d.mts",
     "scripts/install.js",
     "zvec_node_binding.node",
+    "jieba_dict/jieba.dict.utf8",
+    "jieba_dict/hmm_model.utf8",
     "libzvec_diskann_plugin.so",
     "README.md",
     "LICENSE"

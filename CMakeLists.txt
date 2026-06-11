@@ -32,6 +32,7 @@ endif()
 set(ZVEC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/zvec)
 set(ZVEC_BINARY_DIR ${CMAKE_BINARY_DIR}/zvec-build)
 set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
+set(ZVEC_JIEBA_DICT_SRC ${ZVEC_SOURCE_DIR}/thirdparty/cppjieba/cppjieba-5.6.7/dict)
 
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(is_multi_config)
@@ -310,6 +311,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     PREFIX ""
     SUFFIX ".node"
     OUTPUT_NAME "zvec_node_binding"
+)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${ZVEC_JIEBA_DICT_SRC}/jieba.dict.utf8"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict/jieba.dict.utf8"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${ZVEC_JIEBA_DICT_SRC}/hmm_model.utf8"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict/hmm_model.utf8"
+    COMMENT "Copying Jieba tokenizer dictionary"
 )
 
 # Strip symbols to reduce executable size

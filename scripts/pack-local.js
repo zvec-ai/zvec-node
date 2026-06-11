@@ -35,6 +35,16 @@ try {
     console.log(`DiskANN plugin copied from ${pluginPath} to ${pluginDestPath}`);
   }
 
+  // Local packs bundle runtime assets at the root, mirroring the platform
+  // package layout used by normal optional-dependency installs.
+  const jiebaDictPath = path.join(platformPackageDir, 'jieba_dict');
+  if (!fs.existsSync(jiebaDictPath)) {
+    throw new Error(`Jieba dictionary directory not found at ${jiebaDictPath}`);
+  }
+  const jiebaDictDestPath = path.join(PACKAGE_ROOT, 'jieba_dict');
+  fs.cpSync(jiebaDictPath, jiebaDictDestPath, { recursive: true, force: true });
+  console.log(`Jieba dictionary copied from ${jiebaDictPath} to ${jiebaDictDestPath}`);
+
   // Temporarily remove optionalDependencies from package.json
   // (local pack bundles the binary directly, no need for platform packages)
   const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
