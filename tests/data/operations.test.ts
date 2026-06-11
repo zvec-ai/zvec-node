@@ -104,6 +104,19 @@ describe('Data Operations Pipeline', () => {
       expectDoc(sparseResults[0], 42, 1, 1);
     });
 
+    it('should return correct results from multi-query', () => {
+      const doc = makeDoc(42, 1, 1);
+      const results = collection.multiQuerySync({
+        queries: [
+          { fieldName: 'dense', vector: doc.vectors!.dense, numCandidates: 10 },
+          { fieldName: 'sparse', vector: doc.vectors!.sparse, numCandidates: 10 }
+        ],
+        topk: 1,
+        includeVector: true
+      });
+      expectDoc(results[0], 42, 1, 1);
+    });
+
     it('should respect outputFields selection', () => {
       const doc = makeDoc(42, 1, 1);
       const results = collection.querySync({
