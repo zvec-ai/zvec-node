@@ -37,7 +37,19 @@ jobs:
         run: node -p "process.platform + ' ' + process.arch"
 
       - name: Install Dependencies
-        run: npm install --no-package-lock
+        shell: pwsh
+        run: |
+          if ($env:RUNNER_OS -eq 'Linux') {
+            sudo apt-get update
+            sudo apt-get install -y libaio1
+            if ($LASTEXITCODE -ne 0) {
+              sudo apt-get install -y libaio1t64
+            }
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to install libaio runtime package"
+            }
+          }
+          npm install --no-package-lock
 
       - name: Patch Test Imports
         run: node scripts/patch-imports.js tests @zvec/zvec
