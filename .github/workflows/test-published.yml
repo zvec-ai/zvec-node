@@ -41,12 +41,9 @@ jobs:
         run: |
           if ($env:RUNNER_OS -eq 'Linux') {
             sudo apt-get update
-            sudo apt-get install -y libaio1
+            sudo apt-get install -y libaio-dev
             if ($LASTEXITCODE -ne 0) {
-              sudo apt-get install -y libaio1t64
-            }
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to install libaio runtime package"
+              throw "Failed to install libaio development package"
             }
           }
           npm install --no-package-lock
