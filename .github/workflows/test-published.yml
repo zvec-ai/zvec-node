@@ -36,7 +36,7 @@ jobs:
       - name: Debug Environment
         run: node -p "process.platform + ' ' + process.arch"
 
-      - name: Install Dependencies
+      - name: Install System Dependencies
         shell: pwsh
         run: |
           if ($env:RUNNER_OS -eq 'Linux') {
@@ -46,30 +46,38 @@ jobs:
               throw "Failed to install libaio development package"
             }
           }
-          npm install --ignore-scripts --no-package-lock
 
-      - name: Patch Test Imports
-        run: node scripts/patch-imports.js tests @zvec/zvec-published-test
-
-      - name: Install Latest Zvec (Unix)
-        if: runner.os != 'Windows'
+      - name: Prepare Test Project
+        shell: pwsh
         run: |
-          rm -rf node_modules/@zvec
-          npm install @zvec/zvec-published-test@npm:@zvec/zvec@latest
+          $testDir = Join-Path $env:RUNNER_TEMP "zvec-published-test"
+          Remove-Item -Recurse -Force $testDir -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $testDir | Out-Null
+          Copy-Item -Recurse tests -Destination (Join-Path $testDir "tests")
+          Copy-Item jest.config.json -Destination $testDir
+          Copy-Item tsconfig.json -Destination $testDir
+          node scripts/patch-imports.js (Join-Path $testDir "tests") '@zvec/zvec'
 
-      - name: Install Latest Zvec (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          Remove-Item -Recurse -Force node_modules\@zvec -ErrorAction SilentlyContinue
-          npm install @zvec/zvec-published-test@npm:@zvec/zvec@latest
+          Set-Location $testDir
+          npm init -y
+          npm install --no-package-lock --save-dev '@types/jest@^29.5.0' 'jest@^29.7.0' 'ts-jest@^29.1.2' 'typescript@^5.9.3'
+          npm install --no-package-lock '@zvec/zvec@latest'
 
       - name: Verify Installed Version
-        run: npm ls @zvec/zvec-published-test
+        shell: pwsh
+        run: |
+          Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
+          npm ls '@zvec/zvec'
 
       - name: Smoke Test Entry Points
+        shell: pwsh
         run: |
-          node -e "require('@zvec/zvec-published-test')"
-          node --input-type=module -e "await import('@zvec/zvec-published-test')"
+          Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
+          node -e "require('@zvec/zvec')"
+          node --input-type=module -e "await import('@zvec/zvec')"
 
       - name: Run Unit Tests
-        run: npm run test:unit
+        shell: pwsh
+        run: |
+          Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
+          npx jest
