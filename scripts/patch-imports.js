@@ -18,10 +18,16 @@ function walk(dir) {
     } else if (p.endsWith(".ts") || p.endsWith(".js")) {
       let content = fs.readFileSync(p, "utf8");
 
-      const patched = content.replace(
-        /from\s+['"]\.\.\/src[^'"]*['"]/g,
-        `from '${packageName}'`
-      );
+      const sourcePath = String.raw`(?:\.\.\/)+src(?:\/index)?(?:\.[cm]?[jt]s)?`;
+      const patched = content
+        .replace(
+          new RegExp(String.raw`from\s+['"]${sourcePath}['"]`, 'g'),
+          `from '${packageName}'`
+        )
+        .replace(
+          new RegExp(String.raw`require\(\s*['"]${sourcePath}['"]\s*\)`, 'g'),
+          `require('${packageName}')`
+        );
 
       if (patched !== content) {
         fs.writeFileSync(p, patched);

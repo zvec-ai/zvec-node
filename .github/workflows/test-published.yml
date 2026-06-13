@@ -46,25 +46,30 @@ jobs:
               throw "Failed to install libaio development package"
             }
           }
-          npm install --no-package-lock
+          npm install --ignore-scripts --no-package-lock
 
       - name: Patch Test Imports
-        run: node scripts/patch-imports.js tests @zvec/zvec
+        run: node scripts/patch-imports.js tests @zvec/zvec-published-test
 
       - name: Install Latest Zvec (Unix)
         if: runner.os != 'Windows'
         run: |
           rm -rf node_modules/@zvec
-          npm install @zvec/zvec@latest
+          npm install @zvec/zvec-published-test@npm:@zvec/zvec@latest
 
       - name: Install Latest Zvec (Windows)
         if: runner.os == 'Windows'
         run: |
           Remove-Item -Recurse -Force node_modules\@zvec -ErrorAction SilentlyContinue
-          npm install @zvec/zvec@latest
+          npm install @zvec/zvec-published-test@npm:@zvec/zvec@latest
 
       - name: Verify Installed Version
-        run: npm ls @zvec/zvec
+        run: npm ls @zvec/zvec-published-test
+
+      - name: Smoke Test Entry Points
+        run: |
+          node -e "require('@zvec/zvec-published-test')"
+          node --input-type=module -e "await import('@zvec/zvec-published-test')"
 
       - name: Run Unit Tests
         run: npm run test:unit
