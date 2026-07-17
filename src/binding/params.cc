@@ -1,5 +1,7 @@
 #include "params.h"
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include "types.h"
 
 
@@ -70,6 +72,40 @@ Napi::Object CreateIndexParams(Napi::Env env, zvec::IndexParams::Ptr params) {
 }
 
 
+zvec::Result<zvec::QuantizerParam> ParseQuantizerParams(
+    const Napi::Object &obj) {
+  zvec::QuantizerParam params{};
+  if (!obj.Has("quantizerParams")) {
+    return params;
+  }
+
+  auto value = obj.Get("quantizerParams");
+  if (!value.IsObject() || value.IsArray()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected an object for 'quantizerParams'"));
+  }
+
+  auto quantizer_obj = value.As<Napi::Object>();
+  if (quantizer_obj.Has("enableRotate")) {
+    if (!quantizer_obj.Get("enableRotate").IsBoolean()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a boolean for 'enableRotate' in 'quantizerParams'"));
+    }
+    params.set_enable_rotate(
+        quantizer_obj.Get("enableRotate").As<Napi::Boolean>().Value());
+  }
+  return params;
+}
+
+
+Napi::Object CreateQuantizerParams(Napi::Env env,
+                                   const zvec::QuantizerParam &params) {
+  auto obj = Napi::Object::New(env);
+  obj.Set("enableRotate", params.enable_rotate());
+  return obj;
+}
+
+
 zvec::Result<zvec::FlatIndexParams::OPtr> ParseFlatIndexParams(
     const Napi::Object &obj) {
   zvec::MetricType metric_type{zvec::MetricType::IP};
@@ -92,7 +128,13 @@ zvec::Result<zvec::FlatIndexParams::OPtr> ParseFlatIndexParams(
     }
   }
 
-  return std::make_shared<zvec::FlatIndexParams>(metric_type, quantize_type);
+  auto quantizer_params = ParseQuantizerParams(obj);
+  if (!quantizer_params) {
+    return tl::make_unexpected(quantizer_params.error());
+  }
+
+  return std::make_shared<zvec::FlatIndexParams>(metric_type, quantize_type,
+                                                 quantizer_params.value());
 }
 
 
@@ -103,6 +145,8 @@ Napi::Object CreateFlatIndexParams(Napi::Env env,
   obj.Set("indexType", static_cast<uint32_t>(flat_params->type()));
   obj.Set("metricType", static_cast<uint32_t>(flat_params->metric_type()));
   obj.Set("quantizeType", static_cast<uint32_t>(flat_params->quantize_type()));
+  obj.Set("quantizerParams",
+          CreateQuantizerParams(env, flat_params->quantizer_param()));
   return obj;
 }
 
@@ -160,8 +204,14 @@ zvec::Result<zvec::HnswIndexParams::OPtr> ParseHnswIndexParams(
     }
   }
 
+  auto quantizer_params = ParseQuantizerParams(obj);
+  if (!quantizer_params) {
+    return tl::make_unexpected(quantizer_params.error());
+  }
+
   return std::make_shared<zvec::HnswIndexParams>(
-      metric_type, m, ef_construction, quantize_type, use_contiguous_memory);
+      metric_type, m, ef_construction, quantize_type, use_contiguous_memory,
+      quantizer_params.value());
 }
 
 
@@ -175,6 +225,8 @@ Napi::Object CreateHnswIndexParams(Napi::Env env,
   obj.Set("efConstruction", hnsw_params->ef_construction());
   obj.Set("quantizeType", static_cast<uint32_t>(hnsw_params->quantize_type()));
   obj.Set("useContiguousMemory", hnsw_params->use_contiguous_memory());
+  obj.Set("quantizerParams",
+          CreateQuantizerParams(env, hnsw_params->quantizer_param()));
   return obj;
 }
 
@@ -306,8 +358,14 @@ zvec::Result<zvec::IVFIndexParams::OPtr> ParseIVFIndexParams(
     }
   }
 
+  auto quantizer_params = ParseQuantizerParams(obj);
+  if (!quantizer_params) {
+    return tl::make_unexpected(quantizer_params.error());
+  }
+
   return std::make_shared<zvec::IVFIndexParams>(metric_type, n_list, n_iters,
-                                                use_soar, quantize_type);
+                                                use_soar, quantize_type,
+                                                quantizer_params.value());
 }
 
 
@@ -320,6 +378,8 @@ Napi::Object CreateIVFIndexParams(Napi::Env env,
   obj.Set("nList", ivf_params->n_list());
   obj.Set("nIters", ivf_params->n_iters());
   obj.Set("quantizeType", static_cast<uint32_t>(ivf_params->quantize_type()));
+  obj.Set("quantizerParams",
+          CreateQuantizerParams(env, ivf_params->quantizer_param()));
   return obj;
 }
 
@@ -376,8 +436,14 @@ zvec::Result<zvec::DiskAnnIndexParams::OPtr> ParseDiskAnnIndexParams(
     }
   }
 
+  auto quantizer_params = ParseQuantizerParams(obj);
+  if (!quantizer_params) {
+    return tl::make_unexpected(quantizer_params.error());
+  }
+
   return std::make_shared<zvec::DiskAnnIndexParams>(
-      metric_type, max_degree, list_size, pq_chunk_num, quantize_type);
+      metric_type, max_degree, list_size, pq_chunk_num, quantize_type,
+      quantizer_params.value());
 }
 
 
@@ -393,6 +459,8 @@ Napi::Object CreateDiskAnnIndexParams(Napi::Env env,
   obj.Set("pqChunkNum", diskann_params->pq_chunk_num());
   obj.Set("quantizeType",
           static_cast<uint32_t>(diskann_params->quantize_type()));
+  obj.Set("quantizerParams",
+          CreateQuantizerParams(env, diskann_params->quantizer_param()));
   return obj;
 }
 
@@ -817,16 +885,8 @@ zvec::Result<zvec::QueryTarget> ParseQueryTarget(
 
 
 zvec::Status ParseCommonQueryOptions(
-    const Napi::Object &obj, int *topk, std::string *filter,
-    bool *include_vector,
+    const Napi::Object &obj, std::string *filter, bool *include_vector,
     std::optional<std::vector<std::string>> *output_fields) {
-  if (obj.Has("topk")) {
-    if (obj.Get("topk").IsNumber()) {
-      *topk = obj.Get("topk").As<Napi::Number>().Int32Value();
-    } else {
-      return zvec::Status::InvalidArgument("Expected a number for 'topk'");
-    }
-  }
   if (obj.Has("filter")) {
     if (obj.Get("filter").IsString()) {
       *filter = obj.Get("filter").As<Napi::String>().Utf8Value();
@@ -925,9 +985,17 @@ zvec::Result<zvec::SearchQuery> ParseSearchQuery(
   query.topk_ = 10;
   auto obj = value.As<Napi::Object>();
 
-  if (auto s = ParseCommonQueryOptions(obj, &query.topk_, &query.filter_,
-                                       &query.include_vector_,
-                                       &query.output_fields_);
+  if (obj.Has("topk")) {
+    if (obj.Get("topk").IsNumber()) {
+      query.topk_ = obj.Get("topk").As<Napi::Number>().Int32Value();
+    } else {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'topk'"));
+    }
+  }
+
+  if (auto s = ParseCommonQueryOptions(
+          obj, &query.filter_, &query.include_vector_, &query.output_fields_);
       !s.ok()) {
     return tl::make_unexpected(s);
   }
@@ -954,9 +1022,17 @@ zvec::Result<zvec::MultiQuery> ParseMultiQuery(
   query.topk = 10;
   auto obj = value.As<Napi::Object>();
 
-  if (auto s =
-          ParseCommonQueryOptions(obj, &query.topk, &query.filter,
-                                  &query.include_vector, &query.output_fields);
+  if (obj.Has("topk")) {
+    if (obj.Get("topk").IsNumber()) {
+      query.topk = obj.Get("topk").As<Napi::Number>().Int32Value();
+    } else {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'topk'"));
+    }
+  }
+
+  if (auto s = ParseCommonQueryOptions(
+          obj, &query.filter, &query.include_vector, &query.output_fields);
       !s.ok()) {
     return tl::make_unexpected(s);
   }
@@ -1018,6 +1094,98 @@ zvec::Result<zvec::MultiQuery> ParseMultiQuery(
     query.rerank = zvec::reranker::RrfParams{60};
   }
 
+  return query;
+}
+
+
+zvec::Result<zvec::GroupByVectorQuery> ParseGroupByQuery(
+    const Napi::Value &value, zvec::CollectionSchema::Ptr schema) {
+  if (!value.IsObject()) {
+    return tl::make_unexpected(
+        zvec::Status::InvalidArgument("Expected an object for GroupByQuery"));
+  }
+
+  auto obj = value.As<Napi::Object>();
+  if (obj.Has("fts") && !obj.Get("fts").IsUndefined() &&
+      !obj.Get("fts").IsNull()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "GroupByQuery does not support full-text search"));
+  }
+  const bool has_vector = obj.Has("vector") &&
+                          !obj.Get("vector").IsUndefined() &&
+                          !obj.Get("vector").IsNull();
+  if (!has_vector) {
+    return tl::make_unexpected(
+        zvec::Status::InvalidArgument("GroupByQuery requires a vector query"));
+  }
+
+  zvec::GroupByVectorQuery query{};
+  auto parsed_target = ParseQueryTarget(obj, schema);
+  if (!parsed_target) {
+    return tl::make_unexpected(parsed_target.error());
+  }
+  query.target_ = std::move(parsed_target.value());
+
+  if (!obj.Has("groupByFieldName") || !obj.Get("groupByFieldName").IsString()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected a non-empty string for 'groupByFieldName'"));
+  }
+  query.group_by_field_name_ =
+      obj.Get("groupByFieldName").As<Napi::String>().Utf8Value();
+  if (query.group_by_field_name_.empty()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected a non-empty string for 'groupByFieldName'"));
+  }
+  auto *group_by_field = schema->get_field(query.group_by_field_name_);
+  if (!group_by_field) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Group-by field '", query.group_by_field_name_,
+        "' not found in collection schema"));
+  }
+  if (group_by_field->is_vector_field()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Group-by field '", query.group_by_field_name_,
+        "' must be a scalar field"));
+  }
+
+  const auto parse_positive_uint32 =
+      [&](const char *name,
+          uint32_t default_value) -> zvec::Result<uint32_t> {
+    if (!obj.Has(name)) {
+      return default_value;
+    }
+    auto value = obj.Get(name);
+    if (!value.IsNumber()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a positive integer for '", name, "'"));
+    }
+    double number = value.As<Napi::Number>().DoubleValue();
+    if (!std::isfinite(number) || number <= 0 ||
+        std::floor(number) != number ||
+        number > std::numeric_limits<uint32_t>::max()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a positive integer for '", name, "'"));
+    }
+    return static_cast<uint32_t>(number);
+  };
+
+  auto group_count = parse_positive_uint32("groupCount", 2);
+  if (!group_count) {
+    return tl::make_unexpected(group_count.error());
+  }
+  query.group_count_ = group_count.value();
+
+  auto topk_per_group = parse_positive_uint32("topkPerGroup", 3);
+  if (!topk_per_group) {
+    return tl::make_unexpected(topk_per_group.error());
+  }
+  query.topk_per_group_ = topk_per_group.value();
+
+  if (auto s = ParseCommonQueryOptions(
+          obj, &query.filter_, &query.include_vector_, &query.output_fields_);
+      !s.ok()) {
+    return tl::make_unexpected(s);
+  }
   return query;
 }
 

@@ -627,6 +627,25 @@ Napi::Object CreateDoc(Napi::Env env, zvec::CollectionSchema::Ptr schema,
 }
 
 
+Napi::Array CreateGroupResults(Napi::Env env,
+                               zvec::CollectionSchema::Ptr schema,
+                               const zvec::GroupResults &results) {
+  auto groups = Napi::Array::New(env, results.size());
+  for (size_t i = 0; i < results.size(); ++i) {
+    auto group = Napi::Object::New(env);
+    group.Set("groupByValue", results[i].group_by_value_);
+    auto docs = Napi::Array::New(env, results[i].docs_.size());
+    for (size_t j = 0; j < results[i].docs_.size(); ++j) {
+      docs.Set(j, CreateDoc(env, schema,
+                            std::make_shared<zvec::Doc>(results[i].docs_[j])));
+    }
+    group.Set("docs", docs);
+    groups.Set(i, group);
+  }
+  return groups;
+}
+
+
 Napi::Object CreateVectors(Napi::Env &env, zvec::CollectionSchema::Ptr &schema,
                            zvec::Doc::Ptr &doc) {
   auto obj = Napi::Object::New(env);

@@ -30,7 +30,6 @@ try {
 
   for (const runtimeAsset of [
     'zvec_node_binding.node',
-    'libzvec_diskann_plugin.so',
     'jieba_dict'
   ]) {
     const generatedPath = path.join(PACKAGE_ROOT, runtimeAsset);

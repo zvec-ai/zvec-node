@@ -244,6 +244,21 @@ export interface ZVecIndexParams {
 
 
 /**
+ * Additional configuration for vector quantization.
+ *
+ * @group Index Parameters
+ */
+export interface ZVecQuantizerParams {
+  /**
+   * Whether to rotate vectors before integer quantization to reduce
+   * quantization error.
+   * @default false
+   */
+  readonly enableRotate?: boolean;
+}
+
+
+/**
  * Configuration parameters for a flat index on a vector field.
  *
  * @group Index Parameters
@@ -263,6 +278,9 @@ export interface ZVecFlatIndexParams extends ZVecIndexParams {
    * @default ZVecQuantizeType.UNDEFINED
    */
   readonly quantizeType?: ZVecQuantizeType;
+
+  /** Optional quantizer-specific configuration. */
+  readonly quantizerParams?: ZVecQuantizerParams;
 }
 
 
@@ -304,6 +322,9 @@ export interface ZVecHnswIndexParams extends ZVecIndexParams {
    * @default false
    */
   readonly useContiguousMemory?: boolean;
+
+  /** Optional quantizer-specific configuration. */
+  readonly quantizerParams?: ZVecQuantizerParams;
 }
 
 
@@ -391,6 +412,9 @@ export interface ZVecIVFIndexParams extends ZVecIndexParams {
    * @default ZVecQuantizeType.UNDEFINED
    */
   readonly quantizeType?: ZVecQuantizeType;
+
+  /** Optional quantizer-specific configuration. */
+  readonly quantizerParams?: ZVecQuantizerParams;
 }
 
 
@@ -432,6 +456,9 @@ export interface ZVecDiskAnnIndexParams extends ZVecIndexParams {
    * @default ZVecQuantizeType.UNDEFINED
    */
   readonly quantizeType?: ZVecQuantizeType;
+
+  /** Optional quantizer-specific configuration. */
+  readonly quantizerParams?: ZVecQuantizerParams;
 }
 
 
@@ -468,19 +495,23 @@ export interface ZVecFtsIndexParams extends ZVecIndexParams {
   readonly indexType: typeof ZVecIndexType.FTS;
 
   /**
-   * Tokenizer name.
+   * Tokenizer name. Supported values are `standard`, `jieba`, and
+   * `whitespace`. The standard tokenizer follows Unicode word boundaries.
    * @default "standard"
    */
   readonly tokenizerName?: string;
 
   /**
-   * Token filters.
+   * Token filters. Supported values include `lowercase`, `ascii_folding`,
+   * and `stemmer`.
    * @default ["lowercase"]
    */
   readonly filters?: string[];
 
   /**
-   * Additional tokenizer parameters as a JSON object string.
+   * Additional tokenizer and filter parameters as a JSON object string.
+   * Supported options include `max_token_length`, `jieba_dict_dir`,
+   * `user_dict_path`, `cut_mode`, and `stemmer_lang`.
    * @default ""
    */
   readonly extraParams?: string;
@@ -693,6 +724,45 @@ export interface ZVecQuery {
   | ZVecIVFQueryParams
   | ZVecDiskAnnQueryParams
   | ZVecFtsQueryParams;
+}
+
+
+/**
+ * Vector query that groups search results by a scalar field.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecGroupByQuery {
+  /** The vector field to search. */
+  readonly fieldName: string;
+
+  /** The query vector. */
+  readonly vector: ZVecVector;
+
+  /** Scalar field whose values define the result groups. */
+  readonly groupByFieldName: string;
+
+  /** Maximum number of groups to return. @default 2 */
+  readonly groupCount?: number;
+
+  /** Maximum number of documents to return per group. @default 3 */
+  readonly topkPerGroup?: number;
+
+  /** Boolean expression used to filter candidates. */
+  readonly filter?: string;
+
+  /** Whether vector data is included in returned documents. @default false */
+  readonly includeVector?: boolean;
+
+  /** Scalar fields to include. If undefined, all fields are returned. */
+  readonly outputFields?: string[];
+
+  /** Query-time parameters for the selected vector index. */
+  readonly params?:
+  | ZVecHnswQueryParams
+  | ZVecHnswRabitqQueryParams
+  | ZVecIVFQueryParams
+  | ZVecDiskAnnQueryParams;
 }
 
 
@@ -1112,6 +1182,13 @@ export interface ZVecDocInput {
 }
 
 
+/** A group and its highest-scoring documents from a group-by query. */
+export interface ZVecGroupResult {
+  readonly groupByValue: string;
+  readonly docs: ZVecDoc[];
+}
+
+
 /**
  * Represents a collection in Zvec.
  *
@@ -1237,6 +1314,16 @@ export interface ZVecCollection {
    * @returns A promise that resolves with an array of documents matching the combined query.
    */
   multiQuery(params: ZVecMultiQuery): Promise<ZVecDoc[]>;
+
+  /**
+   * Performs a vector search and groups results by a scalar field.
+   */
+  groupByQuerySync(params: ZVecGroupByQuery): ZVecGroupResult[];
+
+  /**
+   * Asynchronously performs a vector search and groups results by a scalar field.
+   */
+  groupByQuery(params: ZVecGroupByQuery): Promise<ZVecGroupResult[]>;
 
   /**
    * Fetches documents by their IDs.

@@ -3,6 +3,7 @@
 
 #include <napi.h>
 #include <zvec/db/doc.h>
+#include <zvec/db/query.h>
 
 
 namespace binding {
@@ -46,6 +47,10 @@ zvec::Status ParseScalarArray(const Napi::Array &array,
 
 Napi::Object CreateDoc(Napi::Env env, zvec::CollectionSchema::Ptr schema,
                        zvec::Doc::Ptr doc);
+
+Napi::Array CreateGroupResults(Napi::Env env,
+                               zvec::CollectionSchema::Ptr schema,
+                               const zvec::GroupResults &results);
 
 Napi::Object CreateVectors(Napi::Env &env, zvec::CollectionSchema::Ptr &schema,
                            zvec::Doc::Ptr &doc);

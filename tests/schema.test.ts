@@ -9,6 +9,7 @@ import {
   ZVecInvertIndexParams,
   ZVecIVFIndexParams,
   ZVecMetricType,
+  ZVecQuantizerParams,
   ZVecQuantizeType
 } from '../src/index';
 
@@ -309,6 +310,44 @@ describe('CollectionSchema', () => {
   });
 
 
+  it('should round-trip quantizer params', () => {
+    const schema = new ZVecCollectionSchema({
+      name: 'test_quantizer_params',
+      vectors: {
+        name: 'vector',
+        dataType: ZVecDataType.VECTOR_FP32,
+        dimension: 16,
+        indexParams: {
+          indexType: ZVecIndexType.HNSW,
+          quantizeType: ZVecQuantizeType.INT8,
+          quantizerParams: { enableRotate: true }
+        }
+      }
+    });
+
+    const params = schema.vector('vector').indexParams as ZVecHnswIndexParams;
+    expect(params.quantizerParams).toEqual({ enableRotate: true });
+  });
+
+
+  it('should reject invalid quantizer params', () => {
+    expect(() => new ZVecCollectionSchema({
+      name: 'test_invalid_quantizer_params',
+      vectors: {
+        name: 'vector',
+        dataType: ZVecDataType.VECTOR_FP32,
+        dimension: 16,
+        indexParams: {
+          indexType: ZVecIndexType.HNSW,
+          quantizerParams: {
+            enableRotate: 'yes'
+          } as unknown as ZVecQuantizerParams
+        }
+      }
+    })).toThrow();
+  });
+
+
   it('should parse FTS index params correctly', () => {
     const schema = new ZVecCollectionSchema({
       name: 'test_fts',
@@ -317,9 +356,9 @@ describe('CollectionSchema', () => {
         dataType: ZVecDataType.STRING,
         indexParams: {
           indexType: ZVecIndexType.FTS,
-          tokenizerName: 'whitespace',
-          filters: ['lowercase'],
-          extraParams: '{"jieba_dict_dir": "/path/to/jieba/dict"}'
+          tokenizerName: 'standard',
+          filters: ['lowercase', 'ascii_folding', 'stemmer'],
+          extraParams: '{"stemmer_lang":"english"}'
         }
       }
     });
@@ -332,8 +371,10 @@ describe('CollectionSchema', () => {
     expect(fields[0].name).toBe('content');
     expect(fields[0].dataType).toBe(ZVecDataType.STRING);
     expect(fields[0].indexParams!.indexType).toBe(ZVecIndexType.FTS);
-    expect((fields[0].indexParams as ZVecFtsIndexParams).tokenizerName).toBe('whitespace');
-    expect((fields[0].indexParams as ZVecFtsIndexParams).filters).toEqual(['lowercase']);
-    expect((fields[0].indexParams as ZVecFtsIndexParams).extraParams).toBe('{"jieba_dict_dir": "/path/to/jieba/dict"}');
+    expect((fields[0].indexParams as ZVecFtsIndexParams).tokenizerName).toBe('standard');
+    expect((fields[0].indexParams as ZVecFtsIndexParams).filters).toEqual([
+      'lowercase', 'ascii_folding', 'stemmer'
+    ]);
+    expect((fields[0].indexParams as ZVecFtsIndexParams).extraParams).toBe('{"stemmer_lang":"english"}');
   });
 });

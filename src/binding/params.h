@@ -16,6 +16,12 @@ zvec::Result<zvec::IndexParams::Ptr> ParseIndexParams(const Napi::Value &value);
 
 Napi::Object CreateIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
 
+zvec::Result<zvec::QuantizerParam> ParseQuantizerParams(
+    const Napi::Object &obj);
+
+Napi::Object CreateQuantizerParams(Napi::Env env,
+                                   const zvec::QuantizerParam &params);
+
 zvec::Result<zvec::FlatIndexParams::OPtr> ParseFlatIndexParams(
     const Napi::Object &obj);
 
@@ -63,6 +69,9 @@ zvec::Result<zvec::SearchQuery> ParseSearchQuery(
     const Napi::Value &value, zvec::CollectionSchema::Ptr schema);
 
 zvec::Result<zvec::MultiQuery> ParseMultiQuery(
+    const Napi::Value &value, zvec::CollectionSchema::Ptr schema);
+
+zvec::Result<zvec::GroupByVectorQuery> ParseGroupByQuery(
     const Napi::Value &value, zvec::CollectionSchema::Ptr schema);
 
 zvec::Result<zvec::QueryParams::Ptr> ParseQueryParams(const Napi::Value &value);

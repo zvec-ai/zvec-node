@@ -80,6 +80,40 @@ void QueryWorker::OnError(const Napi::Error &error) {
 }
 
 
+GroupByQueryWorker::GroupByQueryWorker(Napi::Env env,
+                                       zvec::Collection::Ptr collection,
+                                       zvec::CollectionSchema::Ptr schema,
+                                       zvec::GroupByVectorQuery query,
+                                       Napi::Promise::Deferred deferred)
+    : Napi::AsyncWorker(env),
+      collection_(collection),
+      schema_(schema),
+      query_(std::move(query)),
+      deferred_(deferred) {}
+
+void GroupByQueryWorker::Execute() {
+  auto res = collection_->GroupByQuery(query_);
+  if (res) {
+    results_ = std::move(res.value());
+  } else {
+    status_ = res.error();
+  }
+}
+
+void GroupByQueryWorker::OnOK() {
+  Napi::Env env = Env();
+  if (status_.ok()) {
+    deferred_.Resolve(CreateGroupResults(env, schema_, results_));
+  } else {
+    RejectIfNotOk(env, status_, deferred_);
+  }
+}
+
+void GroupByQueryWorker::OnError(const Napi::Error &error) {
+  deferred_.Reject(error.Value());
+}
+
+
 OptimizeWorker::OptimizeWorker(Napi::Env env, zvec::Collection::Ptr collection,
                                zvec::OptimizeOptions options,
                                Napi::Promise::Deferred deferred)

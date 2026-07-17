@@ -160,6 +160,8 @@ Napi::Object Collection::Init(Napi::Env env, Napi::Object exports,
           InstanceMethod("query", &Collection::QueryAsync),
           InstanceMethod("multiQuerySync", &Collection::MultiQuery),
           InstanceMethod("multiQuery", &Collection::MultiQueryAsync),
+          InstanceMethod("groupByQuerySync", &Collection::GroupByQuery),
+          InstanceMethod("groupByQuery", &Collection::GroupByQueryAsync),
           InstanceMethod("fetchSync", &Collection::Fetch),
           InstanceMethod("optimizeSync", &Collection::Optimize),
           InstanceMethod("optimize", &Collection::OptimizeAsync),
@@ -675,6 +677,56 @@ Napi::Value Collection::MultiQueryAsync(const Napi::CallbackInfo &info) {
     RejectIfNotOk(env, parsed_query.error(), deferred);
     return deferred.Promise();
   }
+}
+
+
+Napi::Value Collection::GroupByQuery(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  if (info.Length() != 1) {
+    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                          "Collection.groupByQuerySync(): Expected exactly 1 "
+                          "argument. Argument must be a GroupByQuery object"));
+    return env.Undefined();
+  }
+
+  auto parsed_query = ParseGroupByQuery(info[0], get_wrapped_schema());
+  if (!parsed_query) {
+    ThrowIfNotOk(env, parsed_query.error());
+    return env.Undefined();
+  }
+  auto res = collection_->GroupByQuery(parsed_query.value());
+  if (!res) {
+    ThrowIfNotOk(env, res.error());
+    return env.Undefined();
+  }
+  return CreateGroupResults(env, get_wrapped_schema(), res.value());
+}
+
+
+Napi::Value Collection::GroupByQueryAsync(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  auto deferred = Napi::Promise::Deferred::New(env);
+  if (info.Length() != 1) {
+    RejectIfNotOk(env,
+                  zvec::Status::InvalidArgument(
+                      "Collection.groupByQuery(): Expected exactly 1 argument. "
+                      "Argument must be a GroupByQuery object"),
+                  deferred);
+    return deferred.Promise();
+  }
+
+  auto parsed_query = ParseGroupByQuery(info[0], get_wrapped_schema());
+  if (!parsed_query) {
+    RejectIfNotOk(env, parsed_query.error(), deferred);
+    return deferred.Promise();
+  }
+  auto *worker =
+      new GroupByQueryWorker(env, collection_, get_wrapped_schema(),
+                             std::move(parsed_query.value()), deferred);
+  worker->Queue();
+  return deferred.Promise();
 }
 
 

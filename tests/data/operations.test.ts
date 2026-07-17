@@ -129,6 +129,87 @@ describe('Data Operations Pipeline', () => {
   });
 
 
+  describe('group-by query', () => {
+    const expectGroups = (groups: ReturnType<ZVecCollection['groupByQuerySync']>) => {
+      expect(groups).toHaveLength(3);
+      for (const group of groups) {
+        expect(group.docs.length).toBeGreaterThan(0);
+        expect(group.docs.length).toBeLessThanOrEqual(2);
+        for (const doc of group.docs) {
+          expect(String(doc.fields.groupId)).toBe(group.groupByValue);
+        }
+        const scores = group.docs.map(doc => doc.score);
+        expect(scores).toEqual([...scores].sort((a, b) => b - a));
+      }
+    };
+
+    it('groups synchronous vector-search results', () => {
+      const doc = makeDoc(42, 1, 1);
+      const groups = collection.groupByQuerySync({
+        fieldName: 'groupDense',
+        vector: doc.vectors!.groupDense,
+        groupByFieldName: 'groupId',
+        groupCount: 3,
+        topkPerGroup: 2,
+      });
+      expectGroups(groups);
+    });
+
+    it('groups asynchronous filtered results and honors output options', async () => {
+      const doc = makeDoc(42, 1, 1);
+      const groups = await collection.groupByQuery({
+        fieldName: 'groupDense',
+        vector: doc.vectors!.groupDense,
+        groupByFieldName: 'groupId',
+        groupCount: 3,
+        topkPerGroup: 2,
+        filter: 'price < 7',
+        includeVector: true,
+        outputFields: ['groupId', 'price'],
+      });
+      expectGroups(groups);
+      for (const group of groups) {
+        for (const result of group.docs) {
+          expect(result.fields.price).toBeLessThan(7);
+          expect(result.vectors.groupDense).toBeDefined();
+        }
+      }
+    });
+
+    it('uses the Python SDK-compatible defaults', () => {
+      const doc = makeDoc(42, 1, 1);
+      const groups = collection.groupByQuerySync({
+        fieldName: 'groupDense',
+        vector: doc.vectors!.groupDense,
+        groupByFieldName: 'groupId',
+      });
+      expect(groups).toHaveLength(2);
+      expect(groups.every(group => group.docs.length <= 3)).toBe(true);
+    });
+
+    it('rejects invalid group parameters', () => {
+      const doc = makeDoc(42, 1, 1);
+      expect(() => collection.groupByQuerySync({
+        fieldName: 'groupDense',
+        vector: doc.vectors!.groupDense,
+        groupByFieldName: 'groupId',
+        groupCount: 0,
+      })).toThrow();
+
+      try {
+        collection.groupByQuerySync({
+          fieldName: 'groupDense',
+          vector: doc.vectors!.groupDense,
+          groupByFieldName: 'missing',
+        });
+        fail('Expected missing group field to throw');
+      } catch (error) {
+        expect(isZVecError(error)).toBe(true);
+      }
+    });
+  });
+
+
   describe('upsert', () => {
     it('should upsert existing docs with new versions', () => {
       batch(collection, 'upsert', 1, 500, 2, 2);

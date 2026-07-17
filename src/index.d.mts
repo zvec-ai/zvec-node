@@ -30,6 +30,8 @@ export type {
   ZVecFtsIndexParams,
   ZVecFtsQuery,
   ZVecFtsQueryParams,
+  ZVecGroupByQuery,
+  ZVecGroupResult,
   ZVecHnswIndexParams,
   ZVecHnswQueryParams,
   ZVecHnswRabitqIndexParams,
@@ -43,6 +45,7 @@ export type {
   ZVecOptimizeOptions,
   ZVecQuery,
   ZVecQueryParams,
+  ZVecQuantizerParams,
   ZVecStatus,
   ZVecVector,
   ZVecVectorSchema

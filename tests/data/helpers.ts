@@ -28,6 +28,15 @@ const TEST_SCHEMA = {
       }
     },
     {
+      name: 'groupDense',
+      dataType: ZVecDataType.VECTOR_FP32,
+      dimension: 4,
+      indexParams: {
+        indexType: ZVecIndexType.HNSW,
+        metricType: ZVecMetricType.IP
+      }
+    },
+    {
       name: 'sparse',
       dataType: ZVecDataType.SPARSE_VECTOR_FP32,
       indexParams: { indexType: ZVecIndexType.HNSW }
@@ -44,6 +53,11 @@ const TEST_SCHEMA = {
       dataType: ZVecDataType.FLOAT,
       nullable: true,
       indexParams: { indexType: ZVecIndexType.INVERT, enableRangeOptimization: true }
+    },
+    {
+      name: 'groupId',
+      dataType: ZVecDataType.INT64,
+      indexParams: { indexType: ZVecIndexType.INVERT }
     },
     {
       name: 'content',
@@ -77,10 +91,15 @@ function sparse(k: number, version: number): Record<number, number> {
 export function makeDoc(k: number, fieldVersion: number, vectorVersion: number): ZVecDocInput {
   return {
     id: `doc_${k}`,
-    vectors: { dense: dense(k, vectorVersion), sparse: sparse(k, vectorVersion) },
+    vectors: {
+      dense: dense(k, vectorVersion),
+      groupDense: [k, k, k, k],
+      sparse: sparse(k, vectorVersion)
+    },
     fields: {
       title: title(k, fieldVersion),
       price: price(k, fieldVersion),
+      groupId: k % 3,
       content: content(k, fieldVersion)
     }
   };
