@@ -131,6 +131,21 @@ export type ZVecLogLevel = typeof ZVecLogLevel[keyof typeof ZVecLogLevel];
 
 
 /**
+ * Numeric enum object defining I/O backends used by DiskANN disk reads.
+ *
+ * @group Global Configuration
+ */
+export declare const ZVecIOBackendType: {
+  /** Synchronous pread-based I/O. */
+  readonly PREAD: 0;
+  /** Asynchronous I/O through libaio. */
+  readonly LIBAIO: 1;
+};
+
+export type ZVecIOBackendType = typeof ZVecIOBackendType[keyof typeof ZVecIOBackendType];
+
+
+/**
  * Configuration options for initializing Zvec globally.
  *
  * @group Global Configuration
@@ -232,6 +247,20 @@ export function ZVecSetDefaultJiebaDictDir(dir: string): void;
  * @group Global Configuration
  */
 export function ZVecGetDefaultJiebaDictDir(): string;
+
+/**
+ * Returns the active I/O backend used for DiskANN disk reads.
+ *
+ * @group Global Configuration
+ */
+export function ZVecGetIOBackendType(): ZVecIOBackendType;
+
+/**
+ * Returns a human-readable description of the active DiskANN I/O backend.
+ *
+ * @group Global Configuration
+ */
+export function ZVecGetIOBackendDescription(): string;
 
 /**
  * Base interface for index parameters, requiring the type of index.
@@ -1481,10 +1510,13 @@ declare const _default: {
   ZVecQuantizeType: typeof ZVecQuantizeType;
   ZVecLogType: typeof ZVecLogType;
   ZVecLogLevel: typeof ZVecLogLevel;
+  ZVecIOBackendType: typeof ZVecIOBackendType;
   ZVecCollectionSchema: typeof ZVecCollectionSchema;
   ZVecInitialize: typeof ZVecInitialize;
   ZVecSetDefaultJiebaDictDir: typeof ZVecSetDefaultJiebaDictDir;
   ZVecGetDefaultJiebaDictDir: typeof ZVecGetDefaultJiebaDictDir;
+  ZVecGetIOBackendType: typeof ZVecGetIOBackendType;
+  ZVecGetIOBackendDescription: typeof ZVecGetIOBackendDescription;
   ZVecCreateAndOpen: typeof ZVecCreateAndOpen;
   ZVecOpen: typeof ZVecOpen;
   isZVecError: typeof isZVecError;

@@ -4,6 +4,9 @@ export {
   ZVecCreateAndOpen,
   ZVecDataType,
   ZVecGetDefaultJiebaDictDir,
+  ZVecGetIOBackendDescription,
+  ZVecGetIOBackendType,
+  ZVecIOBackendType,
   ZVecIndexType,
   ZVecInitialize,
   ZVecLogLevel,
@@ -58,10 +61,13 @@ declare const _default: {
   ZVecQuantizeType: typeof import('./index.js').ZVecQuantizeType;
   ZVecLogType: typeof import('./index.js').ZVecLogType;
   ZVecLogLevel: typeof import('./index.js').ZVecLogLevel;
+  ZVecIOBackendType: typeof import('./index.js').ZVecIOBackendType;
   ZVecCollectionSchema: typeof import('./index.js').ZVecCollectionSchema;
   ZVecInitialize: typeof import('./index.js').ZVecInitialize;
   ZVecSetDefaultJiebaDictDir: typeof import('./index.js').ZVecSetDefaultJiebaDictDir;
   ZVecGetDefaultJiebaDictDir: typeof import('./index.js').ZVecGetDefaultJiebaDictDir;
+  ZVecGetIOBackendType: typeof import('./index.js').ZVecGetIOBackendType;
+  ZVecGetIOBackendDescription: typeof import('./index.js').ZVecGetIOBackendDescription;
   ZVecCreateAndOpen: typeof import('./index.js').ZVecCreateAndOpen;
   ZVecOpen: typeof import('./index.js').ZVecOpen;
   isZVecError: typeof import('./index.js').isZVecError;

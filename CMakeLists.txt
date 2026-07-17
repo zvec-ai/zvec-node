@@ -71,11 +71,6 @@ set(ZVEC_BUILD_TARGETS
     --target zvec_turbo
     --target zvec
 )
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
-    list(APPEND ZVEC_BUILD_TARGETS --target core_knn_diskann)
-    set(ZVEC_DISKANN_LIB ${ZVEC_LIB_DIR}/libcore_knn_diskann.a)
-    list(APPEND ZVEC_BYPRODUCTS ${ZVEC_DISKANN_LIB})
-endif()
 set(ZVEC_CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release)
 if(MSVC)
     list(APPEND ZVEC_CMAKE_ARGS
@@ -208,7 +203,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(zvec-core INTERFACE
         -Wl,--whole-archive
         zvec_core
-        ${ZVEC_DISKANN_LIB}
         -Wl,--no-whole-archive
         -Wl,--start-group
         zvec-ailego

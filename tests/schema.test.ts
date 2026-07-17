@@ -3,15 +3,32 @@ import {
   ZVecDataType,
   ZVecDiskAnnIndexParams,
   ZVecFtsIndexParams,
+  ZVecGetIOBackendDescription,
+  ZVecGetIOBackendType,
   ZVecHnswIndexParams,
   ZVecHnswRabitqIndexParams,
   ZVecIndexType,
   ZVecInvertIndexParams,
+  ZVecIOBackendType,
   ZVecIVFIndexParams,
   ZVecMetricType,
   ZVecQuantizerParams,
   ZVecQuantizeType
 } from '../src/index';
+
+
+describe('DiskANN I/O backend diagnostics', () => {
+  it('should expose the active backend and its description', () => {
+    expect([
+      ZVecIOBackendType.PREAD,
+      ZVecIOBackendType.LIBAIO
+    ]).toContain(ZVecGetIOBackendType());
+
+    const description = ZVecGetIOBackendDescription();
+    expect(typeof description).toBe('string');
+    expect(description.length).toBeGreaterThan(0);
+  });
+});
 
 
 describe('CollectionSchema', () => {
