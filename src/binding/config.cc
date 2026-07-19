@@ -1,4 +1,5 @@
 #include "config.h"
+#include <zvec/ailego/io/io_backend.h>
 #include <zvec/db/config.h>
 #include "types.h"
 
@@ -22,6 +23,17 @@ Napi::Object CreateLogLevelObject(Napi::Env env) {
   obj.Set("WARN", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kWarn));
   obj.Set("ERROR", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kError));
   obj.Set("FATAL", static_cast<uint8_t>(zvec::GlobalConfig::LogLevel::kFatal));
+  obj.Freeze();
+  return obj;
+}
+
+
+Napi::Object CreateIOBackendTypeObject(Napi::Env env) {
+  Napi::Object obj = Napi::Object::New(env);
+  obj.Set("PREAD", static_cast<uint8_t>(
+                       zvec::ailego::IOBackendType::kPread));
+  obj.Set("LIBAIO", static_cast<uint8_t>(
+                        zvec::ailego::IOBackendType::kLibAio));
   obj.Freeze();
   return obj;
 }
@@ -210,14 +222,32 @@ Napi::Value GetDefaultJiebaDictDir(const Napi::CallbackInfo &info) {
 }
 
 
+Napi::Value GetIOBackendType(const Napi::CallbackInfo &info) {
+  return Napi::Number::New(
+      info.Env(),
+      static_cast<uint8_t>(zvec::ailego::current_io_backend_type()));
+}
+
+
+Napi::Value GetIOBackendDescription(const Napi::CallbackInfo &info) {
+  return Napi::String::New(
+      info.Env(), zvec::ailego::current_io_backend_description());
+}
+
+
 Napi::Object InitConfig(Napi::Env env, Napi::Object exports) {
   exports.Set("LogType", CreateLogTypeObject(env));
   exports.Set("LogLevel", CreateLogLevelObject(env));
+  exports.Set("IOBackendType", CreateIOBackendTypeObject(env));
   exports.Set("initialize", Napi::Function::New(env, Initialize));
   exports.Set("setDefaultJiebaDictDir",
               Napi::Function::New(env, SetDefaultJiebaDictDir));
   exports.Set("getDefaultJiebaDictDir",
               Napi::Function::New(env, GetDefaultJiebaDictDir));
+  exports.Set("getIOBackendType",
+              Napi::Function::New(env, GetIOBackendType));
+  exports.Set("getIOBackendDescription",
+              Napi::Function::New(env, GetIOBackendDescription));
   return exports;
 }
 

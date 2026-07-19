@@ -13,7 +13,6 @@ import {
   ZVecQuantizeType
 } from '../src/index';
 
-
 describe('CollectionSchema', () => {
   it('should create a simple schema correctly', () => {
     const schema = new ZVecCollectionSchema({
