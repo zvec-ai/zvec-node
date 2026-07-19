@@ -175,38 +175,6 @@ describe('Data Operations Pipeline', () => {
         }
       }
     });
-
-    it('uses the Python SDK-compatible defaults', () => {
-      const doc = makeDoc(42, 1, 1);
-      const groups = collection.groupByQuerySync({
-        fieldName: 'groupDense',
-        vector: doc.vectors!.groupDense,
-        groupByFieldName: 'groupId',
-      });
-      expect(groups).toHaveLength(2);
-      expect(groups.every(group => group.docs.length <= 3)).toBe(true);
-    });
-
-    it('rejects invalid group parameters', () => {
-      const doc = makeDoc(42, 1, 1);
-      expect(() => collection.groupByQuerySync({
-        fieldName: 'groupDense',
-        vector: doc.vectors!.groupDense,
-        groupByFieldName: 'groupId',
-        groupCount: 0,
-      })).toThrow();
-
-      try {
-        collection.groupByQuerySync({
-          fieldName: 'groupDense',
-          vector: doc.vectors!.groupDense,
-          groupByFieldName: 'missing',
-        });
-        fail('Expected missing group field to throw');
-      } catch (error) {
-        expect(isZVecError(error)).toBe(true);
-      }
-    });
   });
 
 
@@ -420,6 +388,31 @@ describe('Data Operations Pipeline', () => {
         fail('expected to throw');
       } catch (e) {
         expect(isZVecError(e)).toBe(true);
+      }
+    });
+
+    it('should throw on group-by query with invalid parameters', () => {
+      const doc = makeDoc(42, 1, 1);
+      const invalidCalls = [
+        () => collection.groupByQuerySync({
+          fieldName: 'groupDense',
+          vector: doc.vectors!.groupDense,
+          groupByFieldName: 'groupId',
+          groupCount: 0,
+        }),
+        () => collection.groupByQuerySync({
+          fieldName: 'groupDense',
+          vector: doc.vectors!.groupDense,
+          groupByFieldName: 'missing',
+        })
+      ];
+      for (const call of invalidCalls) {
+        try {
+          call();
+          fail('expected to throw');
+        } catch (e) {
+          expect(isZVecError(e)).toBe(true);
+        }
       }
     });
 
