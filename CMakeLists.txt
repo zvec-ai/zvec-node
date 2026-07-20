@@ -174,7 +174,7 @@ else ()
         FastPFOR
         lz4
         snowball
-        utf8proc
+        utf8proc_static
         rpcrt4
         shlwapi
     )
