@@ -89,17 +89,6 @@ Zvec delivers exceptional speed and efficiency, making it ideal for demanding pr
 
 For detailed benchmark methodology, configurations, and complete results, see the [Benchmarks documentation](https://zvec.org/en/docs/db/benchmarks/).
 
-## 🤝 Join Our Community
-
-<div align="center">
-
-| 💬 DingTalk | 📱 WeChat | 🎮 Discord | X (Twitter) |
-| :---: | :---: | :---: | :---: |
-| <img src="https://zvec.oss-cn-hongkong.aliyuncs.com/qrcode/dingding.png" width="150" alt="DingTalk QR Code"/> | <img src="https://zvec.oss-cn-hongkong.aliyuncs.com/qrcode/wechat.png" width="150" alt="WeChat QR Code"/> | [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/rKddFBBu9z) | [![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/ZvecAI)](https://x.com/ZvecAI) |
-| Scan to join | Scan to join | Click to join | Click to follow |
-
-</div>
-
 ## ❤️ Contributing
 
 We welcome and appreciate contributions from the community! Whether you're fixing a bug, adding a feature, or improving documentation, your help makes Zvec better for everyone.
