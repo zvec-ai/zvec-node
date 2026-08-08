@@ -304,7 +304,8 @@ target_link_libraries(${PROJECT_NAME}
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
-    NAPI_CPP_EXCEPTIONS
+    NODE_ADDON_API_CPP_EXCEPTIONS
+    NODE_ADDON_API_CPP_EXCEPTIONS_ALL
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
