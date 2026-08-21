@@ -16,7 +16,7 @@ DeleteByFilterWorker::DeleteByFilterWorker(Napi::Env env,
       deferred_(deferred) {}
 
 void DeleteByFilterWorker::Execute() {
-  status_ = collection_->DeleteByFilter(filter_);
+  status_ = collection_->delete_by_filter(filter_);
 }
 
 void DeleteByFilterWorker::OnOK() {
@@ -52,7 +52,7 @@ QueryWorker::QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
 void QueryWorker::Execute() {
   auto res = std::visit(
       [this](const auto &query) -> zvec::Result<zvec::DocPtrList> {
-        return collection_->Query(query);
+        return collection_->query(query);
       },
       query_);
   if (res) {
@@ -92,7 +92,7 @@ GroupByQueryWorker::GroupByQueryWorker(Napi::Env env,
       deferred_(deferred) {}
 
 void GroupByQueryWorker::Execute() {
-  auto res = collection_->GroupByQuery(query_);
+  auto res = collection_->group_by_query(query_);
   if (res) {
     results_ = std::move(res.value());
   } else {
@@ -123,7 +123,7 @@ OptimizeWorker::OptimizeWorker(Napi::Env env, zvec::Collection::Ptr collection,
       deferred_(deferred) {}
 
 void OptimizeWorker::Execute() {
-  status_ = collection_->Optimize(options_);
+  status_ = collection_->optimize(options_);
 }
 
 void OptimizeWorker::OnOK() {

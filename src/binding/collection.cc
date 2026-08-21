@@ -220,7 +220,7 @@ void Collection::set_wrapped_collection(zvec::Collection::Ptr collection) {
 
 
 void Collection::set_wrapped_schema(Napi::Env &env) {
-  if (auto schema = collection_->Schema(); schema) {
+  if (auto schema = collection_->schema(); schema) {
     schema_ = std::make_shared<zvec::CollectionSchema>(schema.value());
   } else {
     ThrowIfNotOk(env, schema.error());
@@ -242,7 +242,7 @@ bool Collection::ThrowIfClosed(Napi::Env &env) {
 Napi::Value Collection::Path(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
-  if (auto path = collection_->Path(); path) {
+  if (auto path = collection_->path(); path) {
     return Napi::String::New(env, path.value());
   } else {
     ThrowIfNotOk(env, path.error());
@@ -254,7 +254,7 @@ Napi::Value Collection::Path(const Napi::CallbackInfo &info) {
 Napi::Value Collection::Schema(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
-  if (auto schema = collection_->Schema(); schema) {
+  if (auto schema = collection_->schema(); schema) {
     auto constructors = get_constructors(env);
     if (!constructors) {
       return env.Undefined();
@@ -275,7 +275,7 @@ Napi::Value Collection::Schema(const Napi::CallbackInfo &info) {
 Napi::Value Collection::Options(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
-  if (auto options = collection_->Options(); options) {
+  if (auto options = collection_->options(); options) {
     return CreateCollectionOptions(env, options.value());
   } else {
     ThrowIfNotOk(env, options.error());
@@ -287,7 +287,7 @@ Napi::Value Collection::Options(const Napi::CallbackInfo &info) {
 Napi::Value Collection::Stats(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (ThrowIfClosed(env)) return env.Undefined();
-  if (auto stats = collection_->Stats(); stats) {
+  if (auto stats = collection_->stats(); stats) {
     auto obj = Napi::Object::New(env);
     obj.Set("docCount", stats.value().doc_count);
     auto indexCompleteness = Napi::Object::New(env);
@@ -328,7 +328,7 @@ Napi::Value Collection::Insert(const Napi::CallbackInfo &info) {
       }
       docs.emplace_back(std::move(parsed_doc.value()));
     }
-    auto res = collection_->Insert(docs);
+    auto res = collection_->insert(docs);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       Napi::Array statusArray = Napi::Array::New(env);
@@ -347,7 +347,7 @@ Napi::Value Collection::Insert(const Napi::CallbackInfo &info) {
       return env.Undefined();
     }
     docs.emplace_back(std::move(parsed_doc.value()));
-    auto res = collection_->Insert(docs);
+    auto res = collection_->insert(docs);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       return CreateStatusObject(env, statuses[0]);
@@ -384,7 +384,7 @@ Napi::Value Collection::Upsert(const Napi::CallbackInfo &info) {
       }
       docs.emplace_back(std::move(parsed_doc.value()));
     }
-    auto res = collection_->Upsert(docs);
+    auto res = collection_->upsert(docs);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       Napi::Array statusArray = Napi::Array::New(env);
@@ -403,7 +403,7 @@ Napi::Value Collection::Upsert(const Napi::CallbackInfo &info) {
       return env.Undefined();
     }
     docs.emplace_back(std::move(parsed_doc.value()));
-    auto res = collection_->Upsert(docs);
+    auto res = collection_->upsert(docs);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       return CreateStatusObject(env, statuses[0]);
@@ -440,7 +440,7 @@ Napi::Value Collection::Update(const Napi::CallbackInfo &info) {
       }
       docs.emplace_back(std::move(parsed_doc.value()));
     }
-    auto res = collection_->Update(docs);
+    auto res = collection_->update(docs);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       Napi::Array statusArray = Napi::Array::New(env);
@@ -459,7 +459,7 @@ Napi::Value Collection::Update(const Napi::CallbackInfo &info) {
       return env.Undefined();
     }
     docs.emplace_back(std::move(parsed_doc.value()));
-    auto res = collection_->Update(docs);
+    auto res = collection_->update(docs);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       return CreateStatusObject(env, statuses[0]);
@@ -497,7 +497,7 @@ Napi::Value Collection::Delete(const Napi::CallbackInfo &info) {
         return env.Undefined();
       }
     }
-    auto res = collection_->Delete(pks);
+    auto res = collection_->delete_(pks);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       Napi::Array statusArray = Napi::Array::New(env);
@@ -517,7 +517,7 @@ Napi::Value Collection::Delete(const Napi::CallbackInfo &info) {
                    zvec::Status::InvalidArgument("Expected a string for id"));
       return env.Undefined();
     }
-    auto res = collection_->Delete(pks);
+    auto res = collection_->delete_(pks);
     if (res) {
       const zvec::WriteResults &statuses = res.value();
       return CreateStatusObject(env, statuses[0]);
@@ -539,7 +539,8 @@ Napi::Value Collection::DeleteByFilter(const Napi::CallbackInfo &info) {
                  "Argument must be a string"));
     return env.Undefined();
   }
-  auto s = collection_->DeleteByFilter(info[0].As<Napi::String>().Utf8Value());
+  auto s =
+      collection_->delete_by_filter(info[0].As<Napi::String>().Utf8Value());
   return CreateStatusObject(env, s);
 }
 
@@ -577,7 +578,7 @@ Napi::Value Collection::Query(const Napi::CallbackInfo &info) {
 
   if (auto parsed_query = ParseSearchQuery(info[0], get_wrapped_schema());
       parsed_query) {
-    auto res = collection_->Query(parsed_query.value());
+    auto res = collection_->query(parsed_query.value());
     if (res) {
       Napi::Array array = Napi::Array::New(env);
       const zvec::DocPtrList &doc_list = res.value();
@@ -635,7 +636,7 @@ Napi::Value Collection::MultiQuery(const Napi::CallbackInfo &info) {
 
   if (auto parsed_query = ParseMultiQuery(info[0], get_wrapped_schema());
       parsed_query) {
-    auto res = collection_->Query(parsed_query.value());
+    auto res = collection_->query(parsed_query.value());
     if (res) {
       Napi::Array array = Napi::Array::New(env);
       const zvec::DocPtrList &doc_list = res.value();
@@ -695,7 +696,7 @@ Napi::Value Collection::GroupByQuery(const Napi::CallbackInfo &info) {
     ThrowIfNotOk(env, parsed_query.error());
     return env.Undefined();
   }
-  auto res = collection_->GroupByQuery(parsed_query.value());
+  auto res = collection_->group_by_query(parsed_query.value());
   if (!res) {
     ThrowIfNotOk(env, res.error());
     return env.Undefined();
@@ -821,7 +822,7 @@ Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
     if (!parse_ids(obj.Get("ids"))) return env.Undefined();
   }
 
-  res = collection_->Fetch(pks, output_fields, include_vector);
+  res = collection_->fetch(pks, output_fields, include_vector);
 
   if (res) {
     Napi::Object obj = Napi::Object::New(env);
@@ -865,7 +866,7 @@ Napi::Value Collection::Optimize(const Napi::CallbackInfo &info) {
       return env.Undefined();
     }
   }
-  ThrowIfNotOk(env, collection_->Optimize(options));
+  ThrowIfNotOk(env, collection_->optimize(options));
   return env.Undefined();
 }
 
@@ -908,13 +909,19 @@ Napi::Value Collection::OptimizeAsync(const Napi::CallbackInfo &info) {
 
 Napi::Value Collection::Close(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
   if (info.Length() != 0) {
     ThrowIfNotOk(env, zvec::Status::InvalidArgument(
                           "Collection.close(): Expected no argument"));
     return env.Undefined();
   }
-  collection_ = nullptr;
-  schema_ = nullptr;
+  auto status = collection_->close();
+  if (!status.ok()) {
+    ThrowIfNotOk(env, status);
+    return env.Undefined();
+  }
+  collection_.reset();
+  schema_.reset();
   return env.Undefined();
 }
 
@@ -927,9 +934,13 @@ Napi::Value Collection::Destroy(const Napi::CallbackInfo &info) {
                           "Collection.destroy(): Expected no argument"));
     return env.Undefined();
   }
-  ThrowIfNotOk(env, collection_->Destroy());
-  collection_ = nullptr;
-  schema_ = nullptr;
+  auto status = collection_->destroy();
+  if (!status.ok()) {
+    ThrowIfNotOk(env, status);
+    return env.Undefined();
+  }
+  collection_.reset();
+  schema_.reset();
   return env.Undefined();
 }
 
@@ -986,8 +997,8 @@ Napi::Value Collection::AddColumn(const Napi::CallbackInfo &info) {
       return env.Undefined();
     }
   }
-  ThrowIfNotOk(env, collection_->AddColumn(parsed_field_schema.value(),
-                                           expression, options));
+  ThrowIfNotOk(env, collection_->add_column(parsed_field_schema.value(),
+                                            expression, options));
   set_wrapped_schema(env);
   return env.Undefined();
 }
@@ -1003,7 +1014,7 @@ Napi::Value Collection::DropColumn(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
   auto field_name = info[0].As<Napi::String>().Utf8Value();
-  ThrowIfNotOk(env, collection_->DropColumn(field_name));
+  ThrowIfNotOk(env, collection_->drop_column(field_name));
   set_wrapped_schema(env);
   return env.Undefined();
 }
@@ -1086,8 +1097,8 @@ Napi::Value Collection::AlterColumn(const Napi::CallbackInfo &info) {
                           "Collection.alterColumn(): 'newColumnName' and "
                           "'fieldSchema' are mutually exclusive"));
   } else {
-    ThrowIfNotOk(env, collection_->AlterColumn(column_name, new_column_name,
-                                               field_schema, options));
+    ThrowIfNotOk(env, collection_->alter_column(column_name, new_column_name,
+                                                field_schema, options));
     set_wrapped_schema(env);
   }
   return env.Undefined();
@@ -1150,7 +1161,7 @@ Napi::Value Collection::CreateIndex(const Napi::CallbackInfo &info) {
     }
   }
 
-  ThrowIfNotOk(env, collection_->CreateIndex(
+  ThrowIfNotOk(env, collection_->create_index(
                         field_name, parsed_index_params.value(), options));
   set_wrapped_schema(env);
   return env.Undefined();
@@ -1167,7 +1178,7 @@ Napi::Value Collection::DropIndex(const Napi::CallbackInfo &info) {
     return env.Undefined();
   }
   auto field_name = info[0].As<Napi::String>().Utf8Value();
-  ThrowIfNotOk(env, collection_->DropIndex(field_name));
+  ThrowIfNotOk(env, collection_->drop_index(field_name));
   set_wrapped_schema(env);
   return env.Undefined();
 }

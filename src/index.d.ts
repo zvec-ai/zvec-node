@@ -53,6 +53,7 @@ export declare const ZVecIndexType: {
   readonly FLAT: 3;
   readonly HNSW_RABITQ: 4;
   readonly DISKANN: 5;
+  readonly IVF_RABITQ: 7;
   readonly INVERT: 10;
   readonly FTS: 11;
 };
@@ -140,6 +141,8 @@ export declare const ZVecIOBackendType: {
   readonly PREAD: 0;
   /** Asynchronous I/O through libaio. */
   readonly LIBAIO: 1;
+  /** Asynchronous I/O through Linux io_uring. */
+  readonly IO_URING: 2;
 };
 
 export type ZVecIOBackendType = typeof ZVecIOBackendType[keyof typeof ZVecIOBackendType];
@@ -448,6 +451,43 @@ export interface ZVecIVFIndexParams extends ZVecIndexParams {
 
 
 /**
+ * Configuration parameters for an IVF-RaBitQ index on a vector field.
+ *
+ * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
+ *
+ * @group Index Parameters
+ */
+export interface ZVecIvfRabitqIndexParams extends ZVecIndexParams {
+  /** Must be `ZVecIndexType.IVF_RABITQ` (7). */
+  readonly indexType: typeof ZVecIndexType.IVF_RABITQ;
+
+  /**
+   * Distance metric used for similarity computation.
+   * @default ZVecMetricType.IP
+   */
+  readonly metricType?: ZVecMetricType;
+
+  /**
+   * Number of clusters (inverted lists) to partition the dataset into.
+   * @default 1024
+   */
+  readonly nList?: number;
+
+  /**
+   * Total number of bits used for RaBitQ quantization.
+   * @default 7
+   */
+  readonly totalBits?: number;
+
+  /**
+   * Number of samples used for RaBitQ training. `0` lets the engine decide.
+   * @default 0
+   */
+  readonly sampleCount?: number;
+}
+
+
+/**
  * Configuration parameters for a DiskANN index on a vector field.
  *
  * @group Index Parameters
@@ -524,7 +564,7 @@ export interface ZVecFtsIndexParams extends ZVecIndexParams {
   readonly indexType: typeof ZVecIndexType.FTS;
 
   /**
-   * Tokenizer name. Supported values are `standard`, `jieba`, and
+   * Tokenizer name. Supported values are `standard`, `ngram`, `jieba`, and
    * `whitespace`. The standard tokenizer follows Unicode word boundaries.
    * @default "standard"
    */
@@ -539,8 +579,9 @@ export interface ZVecFtsIndexParams extends ZVecIndexParams {
 
   /**
    * Additional tokenizer and filter parameters as a JSON object string.
-   * Supported options include `max_token_length`, `jieba_dict_dir`,
-   * `user_dict_path`, `cut_mode`, and `stemmer_lang`.
+   * Supported options include `max_token_length`, `ngram_min`, `ngram_max`,
+   * `token_chars`, `jieba_dict_dir`, `user_dict_path`, `cut_mode`, and
+   * `stemmer_lang`.
    * @default ""
    */
   readonly extraParams?: string;
@@ -633,6 +674,31 @@ export interface ZVecIVFQueryParams extends ZVecVectorQueryParams {
    * @default 10
    */
   readonly nprobe?: number;
+}
+
+
+/**
+ * Query-time parameters for searches performed against an IVF-RaBitQ index.
+ *
+ * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
+ *
+ * @group Query Parameters
+ */
+export interface ZVecIvfRabitqQueryParams extends ZVecVectorQueryParams {
+  /** Must be `ZVecIndexType.IVF_RABITQ` (7). */
+  readonly indexType: typeof ZVecIndexType.IVF_RABITQ;
+
+  /**
+   * Number of closest clusters (inverted lists) to search.
+   * @default 10
+   */
+  readonly nprobe?: number;
+
+  /**
+   * Candidate expansion factor used by the optional refiner.
+   * @default 10
+   */
+  readonly scaleFactor?: number;
 }
 
 
@@ -751,6 +817,7 @@ export interface ZVecQuery {
   | ZVecHnswQueryParams
   | ZVecHnswRabitqQueryParams
   | ZVecIVFQueryParams
+  | ZVecIvfRabitqQueryParams
   | ZVecDiskAnnQueryParams
   | ZVecFtsQueryParams;
 }
@@ -791,6 +858,7 @@ export interface ZVecGroupByQuery {
   | ZVecHnswQueryParams
   | ZVecHnswRabitqQueryParams
   | ZVecIVFQueryParams
+  | ZVecIvfRabitqQueryParams
   | ZVecDiskAnnQueryParams;
 }
 
@@ -825,6 +893,7 @@ interface ZVecSubQuery {
   | ZVecHnswQueryParams
   | ZVecHnswRabitqQueryParams
   | ZVecIVFQueryParams
+  | ZVecIvfRabitqQueryParams
   | ZVecDiskAnnQueryParams
   | ZVecFtsQueryParams;
 }
@@ -1093,6 +1162,7 @@ export interface ZVecVectorSchema {
   | ZVecHnswIndexParams
   | ZVecHnswRabitqIndexParams
   | ZVecIVFIndexParams
+  | ZVecIvfRabitqIndexParams
   | ZVecDiskAnnIndexParams;
 }
 
@@ -1458,6 +1528,7 @@ export interface ZVecCollection {
     | ZVecHnswIndexParams
     | ZVecHnswRabitqIndexParams
     | ZVecIVFIndexParams
+    | ZVecIvfRabitqIndexParams
     | ZVecDiskAnnIndexParams
     | ZVecInvertIndexParams
     | ZVecFtsIndexParams;

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <zvec/core/interface/constants.h>
 #include "types.h"
 
 
@@ -36,6 +37,8 @@ zvec::Result<zvec::IndexParams::Ptr> ParseIndexParams(
       return ParseHnswRabitqIndexParams(obj);
     case zvec::IndexType::IVF:
       return ParseIVFIndexParams(obj);
+    case zvec::IndexType::IVF_RABITQ:
+      return ParseIvfRabitqIndexParams(obj);
     case zvec::IndexType::DISKANN:
       return ParseDiskAnnIndexParams(obj);
     case zvec::IndexType::INVERT:
@@ -60,6 +63,8 @@ Napi::Object CreateIndexParams(Napi::Env env, zvec::IndexParams::Ptr params) {
       return CreateHnswRabitqIndexParams(env, params);
     case zvec::IndexType::IVF:
       return CreateIVFIndexParams(env, params);
+    case zvec::IndexType::IVF_RABITQ:
+      return CreateIvfRabitqIndexParams(env, params);
     case zvec::IndexType::DISKANN:
       return CreateDiskAnnIndexParams(env, params);
     case zvec::IndexType::INVERT:
@@ -163,7 +168,7 @@ zvec::Result<zvec::HnswIndexParams::OPtr> ParseHnswIndexParams(
     }
   }
 
-  int m{50};
+  int m{static_cast<int>(zvec::core_interface::kDefaultHnswNeighborCnt)};
   if (obj.Has("m")) {
     if (obj.Get("m").IsNumber()) {
       m = obj.Get("m").As<Napi::Number>();
@@ -173,7 +178,8 @@ zvec::Result<zvec::HnswIndexParams::OPtr> ParseHnswIndexParams(
     }
   }
 
-  int ef_construction{500};
+  int ef_construction{
+      static_cast<int>(zvec::core_interface::kDefaultHnswEfConstruction)};
   if (obj.Has("efConstruction")) {
     if (obj.Get("efConstruction").IsNumber()) {
       ef_construction = obj.Get("efConstruction").As<Napi::Number>();
@@ -243,7 +249,8 @@ zvec::Result<zvec::HnswRabitqIndexParams::OPtr> ParseHnswRabitqIndexParams(
     }
   }
 
-  int total_bits{7};
+  int total_bits{
+      static_cast<int>(zvec::core_interface::kDefaultRabitqTotalBits)};
   if (obj.Has("totalBits")) {
     if (obj.Get("totalBits").IsNumber()) {
       total_bits = obj.Get("totalBits").As<Napi::Number>();
@@ -253,7 +260,8 @@ zvec::Result<zvec::HnswRabitqIndexParams::OPtr> ParseHnswRabitqIndexParams(
     }
   }
 
-  int num_clusters{16};
+  int num_clusters{
+      static_cast<int>(zvec::core_interface::kDefaultRabitqNumClusters)};
   if (obj.Has("numClusters")) {
     if (obj.Get("numClusters").IsNumber()) {
       num_clusters = obj.Get("numClusters").As<Napi::Number>();
@@ -263,7 +271,7 @@ zvec::Result<zvec::HnswRabitqIndexParams::OPtr> ParseHnswRabitqIndexParams(
     }
   }
 
-  int m{50};
+  int m{static_cast<int>(zvec::core_interface::kDefaultHnswNeighborCnt)};
   if (obj.Has("m")) {
     if (obj.Get("m").IsNumber()) {
       m = obj.Get("m").As<Napi::Number>();
@@ -273,7 +281,8 @@ zvec::Result<zvec::HnswRabitqIndexParams::OPtr> ParseHnswRabitqIndexParams(
     }
   }
 
-  int ef_construction{500};
+  int ef_construction{
+      static_cast<int>(zvec::core_interface::kDefaultHnswEfConstruction)};
   if (obj.Has("efConstruction")) {
     if (obj.Get("efConstruction").IsNumber()) {
       ef_construction = obj.Get("efConstruction").As<Napi::Number>();
@@ -384,6 +393,65 @@ Napi::Object CreateIVFIndexParams(Napi::Env env,
 }
 
 
+zvec::Result<zvec::IvfRabitqIndexParams::OPtr> ParseIvfRabitqIndexParams(
+    const Napi::Object &obj) {
+  zvec::MetricType metric_type{zvec::MetricType::IP};
+  if (obj.Has("metricType")) {
+    auto parsed_metric_type = ParseMetricType(obj.Get("metricType"));
+    if (!parsed_metric_type) {
+      return tl::make_unexpected(parsed_metric_type.error());
+    }
+    metric_type = parsed_metric_type.value();
+  }
+
+  int n_list{static_cast<int>(zvec::core_interface::kDefaultIvfRabitqNlist)};
+  if (obj.Has("nList")) {
+    if (!obj.Get("nList").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'nList'"));
+    }
+    n_list = obj.Get("nList").As<Napi::Number>().Int32Value();
+  }
+
+  int total_bits{
+      static_cast<int>(zvec::core_interface::kDefaultRabitqTotalBits)};
+  if (obj.Has("totalBits")) {
+    if (!obj.Get("totalBits").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'totalBits'"));
+    }
+    total_bits = obj.Get("totalBits").As<Napi::Number>().Int32Value();
+  }
+
+  int sample_count{0};
+  if (obj.Has("sampleCount")) {
+    if (!obj.Get("sampleCount").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'sampleCount'"));
+    }
+    sample_count = obj.Get("sampleCount").As<Napi::Number>().Int32Value();
+  }
+
+  return std::make_shared<zvec::IvfRabitqIndexParams>(metric_type, n_list,
+                                                      total_bits, sample_count);
+}
+
+
+Napi::Object CreateIvfRabitqIndexParams(Napi::Env env,
+                                        zvec::IndexParams::Ptr params) {
+  auto obj = Napi::Object::New(env);
+  auto ivf_rabitq_params =
+      std::dynamic_pointer_cast<zvec::IvfRabitqIndexParams>(params);
+  obj.Set("indexType", static_cast<uint32_t>(ivf_rabitq_params->type()));
+  obj.Set("metricType",
+          static_cast<uint32_t>(ivf_rabitq_params->metric_type()));
+  obj.Set("nList", ivf_rabitq_params->nlist());
+  obj.Set("totalBits", ivf_rabitq_params->total_bits());
+  obj.Set("sampleCount", ivf_rabitq_params->sample_count());
+  return obj;
+}
+
+
 zvec::Result<zvec::DiskAnnIndexParams::OPtr> ParseDiskAnnIndexParams(
     const Napi::Object &obj) {
   zvec::MetricType metric_type{zvec::MetricType::IP};
@@ -396,7 +464,8 @@ zvec::Result<zvec::DiskAnnIndexParams::OPtr> ParseDiskAnnIndexParams(
     }
   }
 
-  int max_degree{100};
+  int max_degree{
+      static_cast<int>(zvec::core_interface::kDefaultDiskAnnMaxDegree)};
   if (obj.Has("maxDegree")) {
     if (obj.Get("maxDegree").IsNumber()) {
       max_degree = obj.Get("maxDegree").As<Napi::Number>().Int32Value();
@@ -1149,8 +1218,7 @@ zvec::Result<zvec::GroupByVectorQuery> ParseGroupByQuery(
   }
 
   const auto parse_positive_uint32 =
-      [&](const char *name,
-          uint32_t default_value) -> zvec::Result<uint32_t> {
+      [&](const char *name, uint32_t default_value) -> zvec::Result<uint32_t> {
     if (!obj.Has(name)) {
       return default_value;
     }
@@ -1160,8 +1228,7 @@ zvec::Result<zvec::GroupByVectorQuery> ParseGroupByQuery(
           "Expected a positive integer for '", name, "'"));
     }
     double number = value.As<Napi::Number>().DoubleValue();
-    if (!std::isfinite(number) || number <= 0 ||
-        std::floor(number) != number ||
+    if (!std::isfinite(number) || number <= 0 || std::floor(number) != number ||
         number > std::numeric_limits<uint32_t>::max()) {
       return tl::make_unexpected(zvec::Status::InvalidArgument(
           "Expected a positive integer for '", name, "'"));
@@ -1219,6 +1286,8 @@ zvec::Result<zvec::QueryParams::Ptr> ParseQueryParams(
       return ParseHnswRabitqQueryParams(obj);
     case zvec::IndexType::IVF:
       return ParseIVFQueryParams(obj);
+    case zvec::IndexType::IVF_RABITQ:
+      return ParseIvfRabitqQueryParams(obj);
     case zvec::IndexType::DISKANN:
       return ParseDiskAnnQueryParams(obj);
     case zvec::IndexType::INVERT:
@@ -1242,7 +1311,7 @@ zvec::Result<zvec::FlatQueryParams::Ptr> ParseFlatQueryParams(
 
 zvec::Result<zvec::HnswQueryParams::Ptr> ParseHnswQueryParams(
     const Napi::Object &obj) {
-  int ef{300};
+  int ef{static_cast<int>(zvec::core_interface::kDefaultHnswEfSearch)};
   if (obj.Has("ef")) {
     if (obj.Get("ef").IsNumber()) {
       ef = obj.Get("ef").As<Napi::Number>().Int32Value();
@@ -1289,7 +1358,7 @@ zvec::Result<zvec::HnswQueryParams::Ptr> ParseHnswQueryParams(
 
 zvec::Result<zvec::HnswRabitqQueryParams::Ptr> ParseHnswRabitqQueryParams(
     const Napi::Object &obj) {
-  int ef{300};
+  int ef{static_cast<int>(zvec::core_interface::kDefaultHnswEfSearch)};
   if (obj.Has("ef")) {
     if (obj.Get("ef").IsNumber()) {
       ef = obj.Get("ef").As<Napi::Number>().Int32Value();
@@ -1381,6 +1450,58 @@ zvec::Result<zvec::IVFQueryParams::Ptr> ParseIVFQueryParams(
   params->set_radius(radius);
   params->set_is_linear(is_linear);
   return params;
+}
+
+
+zvec::Result<zvec::IvfRabitqQueryParams::Ptr> ParseIvfRabitqQueryParams(
+    const Napi::Object &obj) {
+  int nprobe{static_cast<int>(zvec::core_interface::kDefaultIvfRabitqNprobe)};
+  if (obj.Has("nprobe")) {
+    if (!obj.Get("nprobe").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'nprobe'"));
+    }
+    nprobe = obj.Get("nprobe").As<Napi::Number>().Int32Value();
+  }
+
+  float radius{0.0f};
+  if (obj.Has("radius")) {
+    if (!obj.Get("radius").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'radius'"));
+    }
+    radius = obj.Get("radius").As<Napi::Number>().FloatValue();
+  }
+
+  bool is_linear{false};
+  if (obj.Has("isLinear")) {
+    if (!obj.Get("isLinear").IsBoolean()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a boolean for 'isLinear'"));
+    }
+    is_linear = obj.Get("isLinear").As<Napi::Boolean>().Value();
+  }
+
+  bool is_using_refiner{false};
+  if (obj.Has("isUsingRefiner")) {
+    if (!obj.Get("isUsingRefiner").IsBoolean()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a boolean for 'isUsingRefiner'"));
+    }
+    is_using_refiner = obj.Get("isUsingRefiner").As<Napi::Boolean>().Value();
+  }
+
+  float scale_factor{10.0f};
+  if (obj.Has("scaleFactor")) {
+    if (!obj.Get("scaleFactor").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'scaleFactor'"));
+    }
+    scale_factor = obj.Get("scaleFactor").As<Napi::Number>().FloatValue();
+  }
+
+  return std::make_shared<zvec::IvfRabitqQueryParams>(
+      nprobe, radius, is_linear, is_using_refiner, scale_factor);
 }
 
 

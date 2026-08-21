@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.26)
 cmake_policy(SET CMP0077 NEW)
+
+
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND
+    (NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET OR
+    CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL ""))
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING
+        "Minimum macOS version" FORCE)
+endif()
+
 project(zvec_node_binding)
 
 
@@ -7,10 +16,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
-if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
-endif()
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
@@ -72,6 +77,15 @@ set(ZVEC_BUILD_TARGETS
     --target zvec
 )
 set(ZVEC_CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release)
+set(ZVEC_BUILD_ENV)
+if(APPLE)
+    list(APPEND ZVEC_CMAKE_ARGS
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}"
+    )
+    set(ZVEC_BUILD_ENV ${CMAKE_COMMAND} -E env
+        "MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
+    )
+endif()
 if(MSVC)
     list(APPEND ZVEC_CMAKE_ARGS
         "-DBUILD_SHARED_LIBS=OFF"
@@ -92,7 +106,7 @@ ExternalProject_Add(zvec
     BUILD_BYPRODUCTS
         ${ZVEC_BYPRODUCTS}
     BUILD_COMMAND
-        ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --parallel ${ZVEC_BUILD_JOBS} ${ZVEC_BUILD_TARGETS}
+        ${ZVEC_BUILD_ENV} ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --parallel ${ZVEC_BUILD_JOBS} ${ZVEC_BUILD_TARGETS}
 )
 
 
@@ -105,7 +119,6 @@ link_directories(${ZVEC_LIB_DIR} ${ZVEC_DEPENDENCY_LIB_DIR} ${ZVEC_DEPENDENCY_LI
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(GLOG_LIB glogd)
     set(GFLAGS_LIB gflags_nothreads_debug)
-    set(PROTOBUF_LIB protobufd)
 else()
     set(GLOG_LIB glog)
     if(WIN32)
@@ -113,7 +126,6 @@ else()
     else()
         set(GFLAGS_LIB gflags_nothreads)
     endif()
-    set(PROTOBUF_LIB protobuf)
 endif()
 
 # --- Dependency groups ---
@@ -138,19 +150,16 @@ if (NOT WIN32)
         arrow_acero
         arrow_bundled_dependencies
         arrow_compute
-        arrow_dataset
         parquet
         antlr4-runtime
         ${GLOG_LIB}
         ${GFLAGS_LIB}
-        ${PROTOBUF_LIB}
         FastPFOR
         lz4
         snowball
         utf8proc
     )
 else ()
-    set(PROTOBUF_LIB libprotobuf)
     set(zvec_ailego_deps
         arrow_static
         parquet_static
@@ -165,12 +174,10 @@ else ()
         arrow_acero_static
         arrow_bundled_dependencies
         arrow_compute_static
-        arrow_dataset_static
         parquet_static
         antlr4-runtime-static
         ${GLOG_LIB}
         ${GFLAGS_LIB}
-        ${PROTOBUF_LIB}
         FastPFOR
         lz4
         snowball
@@ -307,6 +314,33 @@ target_compile_definitions(${PROJECT_NAME}
     NODE_ADDON_API_CPP_EXCEPTIONS
     NODE_ADDON_API_CPP_EXCEPTIONS_ALL
 )
+
+
+# Export necessary symbols only.
+if(APPLE)
+    set(ZVEC_NODE_EXPORTS_FILE
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/exports.mac)
+    target_link_options(${PROJECT_NAME} PRIVATE
+        "LINKER:-exported_symbols_list,${ZVEC_NODE_EXPORTS_FILE}"
+        $<$<CONFIG:Release>:LINKER:-dead_strip>
+    )
+elseif(UNIX)
+    set(ZVEC_NODE_EXPORTS_FILE
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/exports.map)
+    target_link_options(${PROJECT_NAME} PRIVATE
+        "LINKER:--version-script=${ZVEC_NODE_EXPORTS_FILE}"
+        $<$<CONFIG:Release>:LINKER:--gc-sections>
+    )
+elseif(MSVC)
+    set(ZVEC_NODE_EXPORTS_FILE
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/exports.def)
+    target_sources(${PROJECT_NAME} PRIVATE ${ZVEC_NODE_EXPORTS_FILE})
+endif()
+
+if(DEFINED ZVEC_NODE_EXPORTS_FILE)
+    set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY
+        LINK_DEPENDS ${ZVEC_NODE_EXPORTS_FILE})
+endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     PREFIX ""

@@ -77,8 +77,5 @@
     "typedoc": "^0.28.20",
     "typedoc-material-theme": "^1.4.1",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "bindings": "^1.5.0"
   }
 }

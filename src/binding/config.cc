@@ -30,10 +30,10 @@ Napi::Object CreateLogLevelObject(Napi::Env env) {
 
 Napi::Object CreateIOBackendTypeObject(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
-  obj.Set("PREAD", static_cast<uint8_t>(
-                       zvec::ailego::IOBackendType::kPread));
-  obj.Set("LIBAIO", static_cast<uint8_t>(
-                        zvec::ailego::IOBackendType::kLibAio));
+  obj.Set("PREAD", static_cast<uint8_t>(zvec::ailego::IOBackendType::kPread));
+  obj.Set("LIBAIO", static_cast<uint8_t>(zvec::ailego::IOBackendType::kLibAio));
+  obj.Set("IO_URING",
+          static_cast<uint8_t>(zvec::ailego::IOBackendType::kIoUring));
   obj.Freeze();
   return obj;
 }
@@ -195,7 +195,7 @@ Napi::Value Initialize(const Napi::CallbackInfo &info) {
     }
   }
 
-  if (auto s = zvec::GlobalConfig::Instance().Initialize(config); !s.ok()) {
+  if (auto s = zvec::GlobalConfig::Instance().initialize(config); !s.ok()) {
     ThrowIfNotOk(env, s);
   }
   return env.Undefined();
@@ -230,8 +230,8 @@ Napi::Value GetIOBackendType(const Napi::CallbackInfo &info) {
 
 
 Napi::Value GetIOBackendDescription(const Napi::CallbackInfo &info) {
-  return Napi::String::New(
-      info.Env(), zvec::ailego::current_io_backend_description());
+  return Napi::String::New(info.Env(),
+                           zvec::ailego::current_io_backend_description());
 }
 
 
@@ -244,8 +244,7 @@ Napi::Object InitConfig(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, SetDefaultJiebaDictDir));
   exports.Set("getDefaultJiebaDictDir",
               Napi::Function::New(env, GetDefaultJiebaDictDir));
-  exports.Set("getIOBackendType",
-              Napi::Function::New(env, GetIOBackendType));
+  exports.Set("getIOBackendType", Napi::Function::New(env, GetIOBackendType));
   exports.Set("getIOBackendDescription",
               Napi::Function::New(env, GetIOBackendDescription));
   return exports;

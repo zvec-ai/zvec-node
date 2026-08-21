@@ -45,6 +45,12 @@ zvec::Result<zvec::IVFIndexParams::OPtr> ParseIVFIndexParams(
 
 Napi::Object CreateIVFIndexParams(Napi::Env env, zvec::IndexParams::Ptr params);
 
+zvec::Result<zvec::IvfRabitqIndexParams::OPtr> ParseIvfRabitqIndexParams(
+    const Napi::Object &obj);
+
+Napi::Object CreateIvfRabitqIndexParams(Napi::Env env,
+                                        zvec::IndexParams::Ptr params);
+
 zvec::Result<zvec::DiskAnnIndexParams::OPtr> ParseDiskAnnIndexParams(
     const Napi::Object &obj);
 
@@ -86,6 +92,9 @@ zvec::Result<zvec::HnswRabitqQueryParams::Ptr> ParseHnswRabitqQueryParams(
     const Napi::Object &obj);
 
 zvec::Result<zvec::IVFQueryParams::Ptr> ParseIVFQueryParams(
+    const Napi::Object &obj);
+
+zvec::Result<zvec::IvfRabitqQueryParams::Ptr> ParseIvfRabitqQueryParams(
     const Napi::Object &obj);
 
 zvec::Result<zvec::DiskAnnQueryParams::Ptr> ParseDiskAnnQueryParams(
