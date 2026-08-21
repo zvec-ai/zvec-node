@@ -17,10 +17,23 @@ permissions:
   contents: read
 
 jobs:
-  test-source:
-    runs-on: ubuntu-latest
+  test-source-linux:
+    name: Test Source (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: ubuntu-latest
+            image: quay.io/pypa/manylinux_2_28_x86_64
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
+          - name: Linux arm64
+            runner: ubuntu-24.04-arm
+            image: quay.io/pypa/manylinux_2_28_aarch64
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-aarch64.tar.gz
+    runs-on: ${{ matrix.runner }}
     container:
-      image: quay.io/pypa/manylinux_2_28_x86_64
+      image: ${{ matrix.image }}
 
     steps:
       - name: Checkout Code
@@ -33,9 +46,12 @@ jobs:
         with:
           node-version: "22.x"
 
+      - name: Debug Environment
+        run: node -p "process.platform + ' ' + process.arch"
+
       - name: Install Dependencies
         run: |
-          curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz | tar xz -C /usr/local --strip-components=1
+          curl -sL ${{ matrix.cmake_url }} | tar xz -C /usr/local --strip-components=1
           npm install --ignore-scripts
 
       - name: Build Binaries
@@ -43,3 +59,72 @@ jobs:
 
       - name: Run Unit Tests
         run: npm run test:unit
+
+  test-source-native:
+    name: Test Source (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            runner: macos-latest
+          - name: Windows x64
+            runner: windows-2022
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Debug Environment
+        run: node -p "process.platform + ' ' + process.arch"
+
+      - name: Setup MSVC Environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-macos-universal.tar.gz | tar xz
+          echo "$(pwd)/cmake-3.27.9-macos-universal/CMake.app/Contents/bin" >> $GITHUB_PATH
+          npm install --ignore-scripts
+
+      - name: Install Dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://cmake.org/files/v3.27/cmake-3.27.9-windows-x86_64.zip" -OutFile cmake.zip
+          Expand-Archive cmake.zip -DestinationPath cmake
+          echo "$((Resolve-Path cmake\cmake-3.27.9-windows-x86_64\bin).Path)" >> $env:GITHUB_PATH
+          npm install --ignore-scripts
+
+      - name: Build Binaries
+        run: npm run dev
+
+      - name: Run Unit Tests
+        run: npm run test:unit
+
+  test-source:
+    name: test-source
+    if: always()
+    needs:
+      - test-source-linux
+      - test-source-native
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify All Platforms Passed
+        env:
+          LINUX_RESULT: ${{ needs.test-source-linux.result }}
+          NATIVE_RESULT: ${{ needs.test-source-native.result }}
+        run: |
+          test "$LINUX_RESULT" = "success"
+          test "$NATIVE_RESULT" = "success"
