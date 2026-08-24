@@ -14,15 +14,20 @@ permissions:
 
 jobs:
   test-published:
+    name: Test Published (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
-          - macos-latest
-          - windows-latest
-    runs-on: ${{ matrix.os }}
+        include:
+          - name: Linux x64 glibc
+            runner: ubuntu-latest
+          - name: Linux arm64 glibc
+            runner: ubuntu-24.04-arm
+          - name: macOS arm64
+            runner: macos-latest
+          - name: Windows x64
+            runner: windows-latest
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout Code
@@ -70,3 +75,79 @@ jobs:
         run: |
           Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
           npx jest
+
+  test-published-musl:
+    name: Test Published (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64 musl
+            runner: ubuntu-24.04
+            bindings_package: "@zvec/bindings-linux-x64-musl"
+          - name: Linux arm64 musl
+            runner: ubuntu-24.04-arm
+            bindings_package: "@zvec/bindings-linux-arm64-musl"
+    runs-on: ${{ matrix.runner }}
+    env:
+      MUSL_CONTAINER: zvec-node-published-musl
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Start musllinux Container
+        run: |
+          docker run -d --name "$MUSL_CONTAINER" \
+            -v "$GITHUB_WORKSPACE:/work:ro" \
+            -w /work \
+            node:22-alpine sleep infinity
+
+      - name: Prepare Test Project
+        run: |
+          docker exec "$MUSL_CONTAINER" sh -c '
+              TEST_DIR=/tmp/zvec-published-test
+              rm -rf "$TEST_DIR"
+              mkdir -p "$TEST_DIR"
+              cp -R /work/tests "$TEST_DIR/tests"
+              cp /work/jest.config.json /work/tsconfig.json "$TEST_DIR"
+              node /work/scripts/patch-imports.js "$TEST_DIR/tests" "@zvec/zvec"
+
+              cd "$TEST_DIR"
+              npm init -y
+              npm install --no-package-lock --save-dev \
+                "@types/jest@^29.5.0" \
+                "jest@^29.7.0" \
+                "ts-jest@^29.1.2" \
+                "typescript@^5.9.3"
+              npm install --no-package-lock "@zvec/zvec@latest"
+            '
+
+      - name: Verify Installed Version
+        run: |
+          docker exec \
+            -w /tmp/zvec-published-test \
+            "$MUSL_CONTAINER" \
+            npm ls '@zvec/zvec' "${{ matrix.bindings_package }}"
+
+      - name: Smoke Test Entry Points
+        run: |
+          docker exec \
+            -w /tmp/zvec-published-test \
+            "$MUSL_CONTAINER" \
+            node -e "require('@zvec/zvec')"
+          docker exec \
+            -w /tmp/zvec-published-test \
+            "$MUSL_CONTAINER" \
+            node --input-type=module -e "await import('@zvec/zvec')"
+
+      - name: Run Unit Tests
+        run: |
+          docker exec \
+            -w /tmp/zvec-published-test \
+            "$MUSL_CONTAINER" \
+            npx jest --runInBand
+
+      - name: Tear Down musllinux Container
+        if: always()
+        run: docker rm -f "$MUSL_CONTAINER" || true

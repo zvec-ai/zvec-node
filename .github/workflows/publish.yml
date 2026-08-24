@@ -11,14 +11,17 @@ permissions:
   contents: read
 
 jobs:
-  publish-linux-bindings:
+  publish-linux-glibc-bindings:
+    name: Publish Bindings (${{ matrix.name }})
     strategy:
       matrix:
         include:
-          - runner: ubuntu-latest
+          - name: Linux x64 glibc
+            runner: ubuntu-latest
             image: quay.io/pypa/manylinux_2_28_x86_64
             cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
-          - runner: ubuntu-24.04-arm
+          - name: Linux arm64 glibc
+            runner: ubuntu-24.04-arm
             image: quay.io/pypa/manylinux_2_28_aarch64
             cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-aarch64.tar.gz
     runs-on: ${{ matrix.runner }}
@@ -46,6 +49,62 @@ jobs:
         run: npm run publish:bindings -- --force
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-linux-musl-bindings:
+    name: Publish Bindings (${{ matrix.name }})
+    strategy:
+      matrix:
+        include:
+          - name: Linux x64 musl
+            runner: ubuntu-24.04
+            image: quay.io/pypa/musllinux_1_2_x86_64:2026.03.01-1
+          - name: Linux arm64 musl
+            runner: ubuntu-24.04-arm
+            image: quay.io/pypa/musllinux_1_2_aarch64:2026.03.01-1
+    runs-on: ${{ matrix.runner }}
+    env:
+      MUSL_CONTAINER: zvec-node-publish-musl
+      MUSL_PATH: /opt/python/cp310-cp310/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Start musllinux Container
+        run: |
+          docker run -d --name "$MUSL_CONTAINER" \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            -e PATH="$MUSL_PATH" \
+            "${{ matrix.image }}" sleep infinity
+
+      - name: Install Dependencies
+        run: |
+          docker exec "$MUSL_CONTAINER" \
+            apk add --no-cache nodejs npm
+          docker exec "$MUSL_CONTAINER" \
+            python -m pip install cmake==3.30.0
+          docker exec "$MUSL_CONTAINER" \
+            npm ci --ignore-scripts
+
+      - name: Build and Publish Bindings
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          docker exec \
+            -e NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" \
+            "$MUSL_CONTAINER" \
+            npm config set '//registry.npmjs.org/:_authToken' "$NODE_AUTH_TOKEN"
+          docker exec \
+            -e NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" \
+            "$MUSL_CONTAINER" \
+            npm run publish:bindings -- --force
+
+      - name: Tear Down musllinux Container
+        if: always()
+        run: docker rm -f "$MUSL_CONTAINER" || true
 
   publish-macos-bindings:
     runs-on: macos-latest
