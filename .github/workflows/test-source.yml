@@ -86,10 +86,6 @@ jobs:
       - name: Debug Environment
         run: node -p "process.platform + ' ' + process.arch"
 
-      - name: Setup MSVC Environment
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
       - name: Install Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
