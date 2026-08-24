@@ -67,6 +67,8 @@ class Collection : public Napi::ObjectWrap<Collection> {
 
   Napi::Value Fetch(const Napi::CallbackInfo &info);
 
+  Napi::Value IterDocs(const Napi::CallbackInfo &info);
+
   Napi::Value Optimize(const Napi::CallbackInfo &info);
 
   Napi::Value OptimizeAsync(const Napi::CallbackInfo &info);

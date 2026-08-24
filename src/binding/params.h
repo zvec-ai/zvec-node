@@ -112,6 +112,9 @@ zvec::Result<zvec::CollectionOptions> ParseCollectionOptions(
 Napi::Object CreateCollectionOptions(Napi::Env env,
                                      zvec::CollectionOptions options);
 
+zvec::Result<zvec::IteratorOptions> ParseIteratorOptions(
+    const Napi::Value &value);
+
 zvec::Result<zvec::AddColumnOptions> ParseAddColumnOptions(
     const Napi::Object &obj);
 

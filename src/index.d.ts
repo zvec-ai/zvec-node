@@ -1281,6 +1281,58 @@ export interface ZVecDocInput {
 }
 
 
+/**
+ * Options for traversing a collection with {@link ZVecCollection.iterDocsSync}.
+ *
+ * @group Collection
+ */
+export interface ZVecIteratorOptions {
+  /**
+   * Scalar fields to include in each document. If undefined, all scalar
+   * fields are returned. An empty array returns no scalar fields.
+   * @default undefined
+   */
+  readonly outputFields?: string[];
+
+  /**
+   * Whether vector data is included in each document.
+   * @default true
+   */
+  readonly includeVector?: boolean;
+}
+
+
+/**
+ * A synchronous, forward-only iterator over a collection snapshot.
+ *
+ * The iterator closes automatically when exhausted or when a `for...of`
+ * loop exits early. Call {@link closeSync} when abandoning an iterator that
+ * is consumed manually through {@link next}.
+ *
+ * Iteration order is unspecified. Once closed, all subsequent calls to
+ * {@link next} return an iterator result whose `done` property is `true`.
+ *
+ * @group Collection
+ */
+export interface ZVecDocIterator extends IterableIterator<ZVecDoc> {
+  /** Return the next document, or a completed iterator result at EOF. */
+  next(): IteratorResult<ZVecDoc>;
+
+  /**
+   * Close the iterator after an early exit. Called automatically by
+   * `for...of`; an optional value is accepted for iterator-protocol
+   * compatibility and is ignored.
+   */
+  return(value?: unknown): IteratorResult<ZVecDoc>;
+
+  /** Explicitly close the iterator. This method is idempotent. */
+  closeSync(): void;
+
+  /** Return this iterator. */
+  [Symbol.iterator](): ZVecDocIterator;
+}
+
+
 /** A group and its highest-scoring documents from a group-by query. */
 export interface ZVecGroupResult {
   readonly groupByValue: string;
@@ -1444,6 +1496,27 @@ export interface ZVecCollection {
     outputFields?: string[];
     includeVector?: boolean;
   }): Record<string, ZVecDoc>;
+
+  /**
+   * Traverse all documents using an isolated snapshot created when this
+   * method is called.
+   *
+   * Documents written after the iterator is created are not visible to it.
+   * On writable collections, creating the snapshot may seal the current
+   * writing segment. Traversal order is unspecified.
+   *
+   * While an iterator is open, collection close/destroy, optimize, index DDL,
+   * and column DDL operations are rejected. Writes, queries, and fetches
+   * remain available. Exhaust the iterator, exit its `for...of` loop, or call
+   * `closeSync()` to release this restriction.
+   *
+   * This is a synchronous API and may block the Node.js event loop while
+   * loading and converting documents.
+   *
+   * @param options - Optional output field and vector selection.
+   * @returns A synchronous document iterator.
+   */
+  iterDocsSync(options?: ZVecIteratorOptions): ZVecDocIterator;
 
   /**
    * Optimizes the collection's internal structures for better performance.

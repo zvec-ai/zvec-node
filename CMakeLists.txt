@@ -306,6 +306,7 @@ add_library(${PROJECT_NAME} SHARED
     src/binding/collection.cc
     src/binding/config.cc
     src/binding/doc.cc
+    src/binding/doc_iterator.cc
     src/binding/params.cc
     src/binding/schema.cc
     src/binding/types.cc

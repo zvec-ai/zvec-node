@@ -2,6 +2,7 @@
 #include <optional>
 #include "async_workers.h"
 #include "doc.h"
+#include "doc_iterator.h"
 #include "params.h"
 #include "schema.h"
 #include "types.h"
@@ -163,6 +164,7 @@ Napi::Object Collection::Init(Napi::Env env, Napi::Object exports,
           InstanceMethod("groupByQuerySync", &Collection::GroupByQuery),
           InstanceMethod("groupByQuery", &Collection::GroupByQueryAsync),
           InstanceMethod("fetchSync", &Collection::Fetch),
+          InstanceMethod("iterDocsSync", &Collection::IterDocs),
           InstanceMethod("optimizeSync", &Collection::Optimize),
           InstanceMethod("optimize", &Collection::OptimizeAsync),
           InstanceMethod("closeSync", &Collection::Close),
@@ -838,6 +840,46 @@ Napi::Value Collection::Fetch(const Napi::CallbackInfo &info) {
     ThrowIfNotOk(env, res.error());
     return env.Undefined();
   }
+}
+
+
+Napi::Value Collection::IterDocs(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+  if (ThrowIfClosed(env)) return env.Undefined();
+  if (info.Length() > 1) {
+    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
+                          "Collection.iterDocsSync(): Expected 0 to 1 "
+                          "argument. Argument must be an IteratorOptions "
+                          "object."));
+    return env.Undefined();
+  }
+
+  auto options = zvec::IteratorOptions{};
+  if (info.Length() == 1) {
+    auto parsed_options = ParseIteratorOptions(info[0]);
+    if (!parsed_options) {
+      ThrowIfNotOk(env, parsed_options.error());
+      return env.Undefined();
+    }
+    options = std::move(parsed_options.value());
+  }
+
+  auto iterator = collection_->create_iterator(options);
+  if (!iterator) {
+    ThrowIfNotOk(env, iterator.error());
+    return env.Undefined();
+  }
+
+  auto constructors = get_constructors(env);
+  if (!constructors) {
+    return env.Undefined();
+  }
+  auto obj = constructors->docIteratorConstructor.New(
+      {Napi::External<void>::New(env, kInternalConstructionMarker)});
+  auto wrapped_iterator = DocIterator::Unwrap(obj);
+  wrapped_iterator->set_wrapped(std::move(iterator.value()), collection_,
+                                schema_);
+  return obj;
 }
 
 

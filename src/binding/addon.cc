@@ -1,6 +1,7 @@
 #include "addon.h"
 #include "collection.h"
 #include "config.h"
+#include "doc_iterator.h"
 #include "schema.h"
 #include "types.h"
 
@@ -31,6 +32,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports = binding::InitTypes(env, exports);
   exports = binding::InitConfig(env, exports);
   exports = binding::CollectionSchema::Init(env, exports, ctors);
+  exports = binding::DocIterator::Init(env, exports, ctors);
   exports = binding::Collection::Init(env, exports, ctors);
 
   env.SetInstanceData(ctors);

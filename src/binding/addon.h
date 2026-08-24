@@ -10,6 +10,7 @@ inline void *kInternalConstructionMarker{reinterpret_cast<void *>(0x12345678)};
 struct AddonConstructors {
   Napi::FunctionReference collectionSchemaConstructor;
   Napi::FunctionReference collectionConstructor;
+  Napi::FunctionReference docIteratorConstructor;
 };
 
 

@@ -1586,6 +1586,49 @@ Napi::Object CreateCollectionOptions(Napi::Env env,
 }
 
 
+zvec::Result<zvec::IteratorOptions> ParseIteratorOptions(
+    const Napi::Value &value) {
+  zvec::IteratorOptions options{};
+  if (value.IsUndefined()) {
+    return options;
+  }
+  if (!value.IsObject() || value.IsNull() || value.IsArray()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected an object for IteratorOptions"));
+  }
+
+  auto obj = value.As<Napi::Object>();
+  if (obj.Has("outputFields") && !obj.Get("outputFields").IsUndefined()) {
+    auto value = obj.Get("outputFields");
+    if (!value.IsArray()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected an array of strings for 'outputFields'"));
+    }
+    std::vector<std::string> output_fields;
+    auto array = value.As<Napi::Array>();
+    output_fields.reserve(array.Length());
+    for (uint32_t i = 0; i < array.Length(); ++i) {
+      if (!array.Get(i).IsString()) {
+        return tl::make_unexpected(zvec::Status::InvalidArgument(
+            "Expected an array of strings for 'outputFields'"));
+      }
+      output_fields.push_back(array.Get(i).As<Napi::String>().Utf8Value());
+    }
+    options.output_fields_ = std::move(output_fields);
+  }
+
+  if (obj.Has("includeVector") && !obj.Get("includeVector").IsUndefined()) {
+    auto value = obj.Get("includeVector");
+    if (!value.IsBoolean()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a boolean for 'includeVector'"));
+    }
+    options.include_vector_ = value.As<Napi::Boolean>().Value();
+  }
+  return options;
+}
+
+
 zvec::Result<zvec::AddColumnOptions> ParseAddColumnOptions(
     const Napi::Object &obj) {
   int concurrency{0};

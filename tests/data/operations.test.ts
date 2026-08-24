@@ -78,6 +78,21 @@ describe('Data Operations Pipeline', () => {
         expect(batchFetched[doc.id].vectors.sparse).toBeDefined();
       }
     });
+
+    it('should iterate all docs', () => {
+      const docs = Array.from(collection.iterDocsSync({
+        outputFields: ['title'],
+        includeVector: false
+      }));
+
+      expect(docs).toHaveLength(1000);
+      expect(new Set(docs.map(doc => doc.id)).size).toBe(1000);
+
+      const doc = docs.find(doc => doc.id === 'doc_42')!;
+      expect(doc.fields.title).toBe('Product_42_v1');
+      expect(doc.fields.price).toBeUndefined();
+      expect(Object.keys(doc.vectors)).toHaveLength(0);
+    });
   });
 
 
