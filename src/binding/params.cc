@@ -1040,6 +1040,23 @@ zvec::Result<zvec::reranker::RerankParams> ParseRerankParams(
       "Unsupported rerank type '", type, "'. Expected 'rrf' or 'weighted'"));
 }
 
+
+zvec::Result<int> ParsePositiveInt32(const Napi::Value &value,
+                                     const char *name) {
+  if (!value.IsNumber()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected a positive integer for '", name, "'"));
+  }
+
+  const double number = value.As<Napi::Number>().DoubleValue();
+  if (!std::isfinite(number) || number <= 0 || std::floor(number) != number ||
+      number > std::numeric_limits<int>::max()) {
+    return tl::make_unexpected(zvec::Status::InvalidArgument(
+        "Expected a positive integer for '", name, "'"));
+  }
+  return static_cast<int>(number);
+}
+
 }  // namespace
 
 
@@ -1055,12 +1072,11 @@ zvec::Result<zvec::SearchQuery> ParseSearchQuery(
   auto obj = value.As<Napi::Object>();
 
   if (obj.Has("topk")) {
-    if (obj.Get("topk").IsNumber()) {
-      query.topk_ = obj.Get("topk").As<Napi::Number>().Int32Value();
-    } else {
-      return tl::make_unexpected(
-          zvec::Status::InvalidArgument("Expected a number for 'topk'"));
+    auto topk = ParsePositiveInt32(obj.Get("topk"), "topk");
+    if (!topk) {
+      return tl::make_unexpected(topk.error());
     }
+    query.topk_ = topk.value();
   }
 
   if (auto s = ParseCommonQueryOptions(
@@ -1092,12 +1108,11 @@ zvec::Result<zvec::MultiQuery> ParseMultiQuery(
   auto obj = value.As<Napi::Object>();
 
   if (obj.Has("topk")) {
-    if (obj.Get("topk").IsNumber()) {
-      query.topk = obj.Get("topk").As<Napi::Number>().Int32Value();
-    } else {
-      return tl::make_unexpected(
-          zvec::Status::InvalidArgument("Expected a number for 'topk'"));
+    auto topk = ParsePositiveInt32(obj.Get("topk"), "topk");
+    if (!topk) {
+      return tl::make_unexpected(topk.error());
     }
+    query.topk = topk.value();
   }
 
   if (auto s = ParseCommonQueryOptions(
