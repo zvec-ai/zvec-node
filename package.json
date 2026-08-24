@@ -38,6 +38,7 @@
   "files": [
     "src/index.js",
     "src/index.mjs",
+    "src/prebuilt.js",
     "src/index.d.ts",
     "src/index.d.mts",
     "scripts/install.js",
@@ -64,8 +65,13 @@
   "optionalDependencies": {
     "@zvec/bindings-darwin-arm64": "0.6.0",
     "@zvec/bindings-linux-arm64": "0.6.0",
+    "@zvec/bindings-linux-arm64-musl": "0.6.0",
     "@zvec/bindings-linux-x64": "0.6.0",
+    "@zvec/bindings-linux-x64-musl": "0.6.0",
     "@zvec/bindings-win32-x64": "0.6.0"
+  },
+  "dependencies": {
+    "detect-libc": "^2.1.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

@@ -1,9 +1,11 @@
 const path = require('path');
 const fs = require('fs');
+const { resolvePrebuiltTarget } = require('./prebuilt');
 
 
 let binding;
 let bindingAssetDir;
+let prebuiltTarget = null;
 
 
 try {
@@ -12,14 +14,15 @@ try {
     binding = require(bundledBinaryPath);
     bindingAssetDir = path.dirname(bundledBinaryPath);
   } else {  // Fall back to platform-specific prebuilt binary package
-    const platformPackage = `@zvec/bindings-${process.platform}-${process.arch}`;
-    const platformPackagePath = require.resolve(platformPackage);
+    prebuiltTarget = resolvePrebuiltTarget();
+    const platformPackagePath = require.resolve(prebuiltTarget.packageName);
     binding = require(platformPackagePath);
     bindingAssetDir = path.dirname(platformPackagePath);
   }
 } catch (err) {
+  const target = prebuiltTarget?.target ?? `${process.platform}-${process.arch}`;
   throw new Error(
-    `Zvec Error: Failed to load prebuilt binary for ${process.platform}-${process.arch}. ` +
+    `Zvec Error: Failed to load prebuilt binary for ${target}. ` +
     `This platform may not be supported. ` +
     `Original error: ${err.message}`
   );

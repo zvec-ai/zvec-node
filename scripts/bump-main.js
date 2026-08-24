@@ -3,6 +3,11 @@
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require("child_process");
+const {
+  assertUniformBindingVersion,
+  getBindingPackages,
+  syncBindingOptionalDependencies,
+} = require('./binding-packages');
 
 const type = process.argv[2];
 
@@ -12,26 +17,18 @@ if (!["patch", "minor", "major"].includes(type)) {
 }
 
 const root = path.resolve(__dirname, "..");
-const packagesDir = path.join(root, "packages");
 const rootPkgPath = path.join(root, "package.json");
 
 const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, "utf8"));
-const optDeps = rootPkg.optionalDependencies || {};
+const bindingPackages = getBindingPackages(root);
+assertUniformBindingVersion(bindingPackages);
 
-const dirs = fs.readdirSync(packagesDir);
-
-for (const dir of dirs) {
-  const pkgJsonPath = path.join(packagesDir, dir, "package.json");
-  if (!fs.existsSync(pkgJsonPath)) continue;
-
-  const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
-  if (optDeps[pkg.name] !== undefined) {
-    console.log(`Updating ${pkg.name}: ${optDeps[pkg.name]} → ${pkg.version}`);
-    optDeps[pkg.name] = pkg.version;
-  }
+for (const { packageJson } of bindingPackages) {
+  const oldVersion = rootPkg.optionalDependencies?.[packageJson.name];
+  console.log(`Updating ${packageJson.name}: ${oldVersion ?? '(missing)'} → ${packageJson.version}`);
 }
 
-rootPkg.optionalDependencies = optDeps;
+syncBindingOptionalDependencies(rootPkg, bindingPackages);
 fs.writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, 2) + "\n");
 
 console.log(`\nBumping main package (${type})`);

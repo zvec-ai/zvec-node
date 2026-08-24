@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
-const path = require('path');
-const fs = require('fs');
 const { execSync } = require("child_process");
+const path = require('path');
+const {
+  assertUniformBindingVersion,
+  getBindingPackages,
+} = require('./binding-packages');
 
 const type = process.argv[2];
 
@@ -12,27 +15,20 @@ if (!["patch", "minor", "major"].includes(type)) {
 }
 
 const root = path.resolve(__dirname, "..");
-const packagesDir = path.join(root, "packages");
+const bindingPackages = getBindingPackages(root);
+assertUniformBindingVersion(bindingPackages);
 
-const dirs = fs.readdirSync(packagesDir);
-
-for (const dir of dirs) {
-  const pkgDir = path.join(packagesDir, dir);
-  const pkgJson = path.join(pkgDir, "package.json");
-
-  if (!fs.existsSync(pkgJson)) continue;
-
-  console.log(`\nBumping ${dir} (${type})`);
+for (const { target, packageDir } of bindingPackages) {
+  console.log(`\nBumping bindings-${target} (${type})`);
 
   execSync(`npm version ${type} --no-git-tag-version`, {
-    cwd: pkgDir,
+    cwd: packageDir,
     stdio: "inherit",
   });
 }
 
-// Read the new version from any binding package
-const firstDir = dirs.find(dir => fs.existsSync(path.join(packagesDir, dir, "package.json")));
-const newVersion = JSON.parse(fs.readFileSync(path.join(packagesDir, firstDir, "package.json"), "utf8")).version;
+const updatedBindingPackages = getBindingPackages(root);
+const newVersion = assertUniformBindingVersion(updatedBindingPackages);
 
 console.log("\n✅ Bindings version bump completed");
 console.log("\n📝 Next steps:");

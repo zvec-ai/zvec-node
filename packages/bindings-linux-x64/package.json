@@ -8,6 +8,9 @@
   "cpu": [
     "x64"
   ],
+  "libc": [
+    "glibc"
+  ],
   "main": "zvec_node_binding.node",
   "files": [
     "zvec_node_binding.node",

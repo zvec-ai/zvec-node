@@ -2,9 +2,13 @@
 
 
 const { execSync } = require('child_process');
-const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { verifyBuildArtifacts } = require('./artifacts');
+const {
+  readExpectedPrebuiltTarget,
+  resolvePrebuiltTargetForPackaging,
+} = require('../src/prebuilt');
 
 
 // Build variables
@@ -18,14 +22,16 @@ const BUILD_TYPE = process.argv.includes('--debug') ? 'Debug'
 // Path variables
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const BUILD_DIR = path.join(PACKAGE_ROOT, 'build');
-const BUILD_SUBDIR = BUILD_TYPE.charAt(0).toUpperCase() + BUILD_TYPE.slice(1);
-const BUILD_TARGET_DIR = path.join(BUILD_DIR, BUILD_SUBDIR);
-
-
-console.log(`Building and packaging Zvec Node.js binding ...`);
+console.log(`Building Zvec Node.js binding ...`);
 
 
 try {
+  const expectedPrebuiltTarget = readExpectedPrebuiltTarget();
+  if (expectedPrebuiltTarget !== null) {
+    const prebuiltTarget = resolvePrebuiltTargetForPackaging();
+    console.log(`Validated prebuilt build target: ${prebuiltTarget.target}.`);
+  }
+
   // Compile
   const cmdParts = ['cmake-js'];
   if (!IS_WINDOWS) {
@@ -40,35 +46,9 @@ try {
   console.log(`\nCompiling native addon. Jobs: ${JOBS}, Build type: ${BUILD_TYPE}.`);
   console.log(`Running command: ${cmd}\n`);
   execSync(cmd, { stdio: 'inherit', cwd: PACKAGE_ROOT });
-  const binaryPath = path.join(BUILD_TARGET_DIR, 'zvec_node_binding.node');
-  if (!fs.existsSync(binaryPath)) {
-    throw new Error(`Binary not found at ${binaryPath}`);
-  }
-
-  // Package
-  const platform = process.platform;
-  const arch = process.arch;
-  const platformPackageName = `@zvec/bindings-${platform}-${arch}`;
-  const platformPackageDir = path.join(PACKAGE_ROOT, 'packages', `bindings-${platform}-${arch}`);
-  if (!fs.existsSync(platformPackageDir)) {
-    throw new Error(`Platform package directory does not exist: ${platformPackageDir}. This platform (${platform}-${arch}) may not be supported.`);
-  }
-  const targetPath = path.join(platformPackageDir, 'zvec_node_binding.node');
-  fs.copyFileSync(binaryPath, targetPath);
-
-  // CMake stages jieba_dict next to the addon; keep that runtime layout in the
-  // platform package so the JS wrapper can register it on load.
-  const jiebaDictPath = path.join(BUILD_TARGET_DIR, 'jieba_dict');
-  if (!fs.existsSync(jiebaDictPath)) {
-    throw new Error(`Jieba dictionary directory not found at ${jiebaDictPath}`);
-  }
-  fs.cpSync(jiebaDictPath, path.join(platformPackageDir, 'jieba_dict'), {
-    recursive: true,
-    force: true
-  });
-
-  console.log(`✅ Binary compiled and packaged for ${platformPackageName} at: ${targetPath}`);
+  const artifacts = verifyBuildArtifacts(PACKAGE_ROOT, BUILD_TYPE);
+  console.log(`✅ Native addon compiled at: ${artifacts.binaryPath}`);
 } catch (error) {
-  console.error('❌ Error during build and packaging:', error.message);
+  console.error('❌ Error during build:', error.message);
   process.exit(1);
 }

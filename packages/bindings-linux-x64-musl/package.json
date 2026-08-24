@@ -1,15 +1,15 @@
 {
-  "name": "@zvec/bindings-linux-arm64",
+  "name": "@zvec/bindings-linux-x64-musl",
   "version": "0.6.0",
   "license": "Apache-2.0",
   "os": [
     "linux"
   ],
   "cpu": [
-    "arm64"
+    "x64"
   ],
   "libc": [
-    "glibc"
+    "musl"
   ],
   "main": "zvec_node_binding.node",
   "files": [

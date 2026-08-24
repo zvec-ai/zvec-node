@@ -5,6 +5,8 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { resolvePrebuiltTargetForPackaging } = require('../src/prebuilt');
+const { stagePrebuiltArtifacts } = require('./artifacts');
 
 
 const shouldForce = process.argv.includes('-f') || process.argv.includes('--force');
@@ -25,20 +27,19 @@ function publish(packageName, version, platformPackageDir) {
 try {
   // Path variables
   const PACKAGE_ROOT = path.resolve(__dirname, '..');
-  const platform = process.platform;
-  const arch = process.arch;
-  const platformPackageDir = path.join(PACKAGE_ROOT, 'packages', `bindings-${platform}-${arch}`);
-  const targetPath = path.join(platformPackageDir, 'zvec_node_binding.node');
-  const packageJsonPath = path.join(platformPackageDir, 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const prebuiltTarget = resolvePrebuiltTargetForPackaging();
 
   // Build the bindings
-  execSync('npm run build', { stdio: 'inherit', cwd: PACKAGE_ROOT });
+  execSync(`npm run build -- --target=${prebuiltTarget.target}`, {
+    stdio: 'inherit',
+    cwd: PACKAGE_ROOT,
+  });
 
-  // Verify the platform package exists
-  if (!fs.existsSync(targetPath)) {
-    throw new Error(`Platform package does not exist: ${targetPath}`);
-  }
+  // Stage and verify the prebuilt platform package.
+  const staged = stagePrebuiltArtifacts(PACKAGE_ROOT, prebuiltTarget);
+  const platformPackageDir = staged.targetDir;
+  const packageJsonPath = path.join(platformPackageDir, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
   if (shouldForce) {
     console.log('\n🤖 --force flag detected. Skipping confirmation...');

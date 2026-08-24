@@ -4,54 +4,66 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const {
+  BINARY_FILENAME,
+  JIEBA_DICT_DIRNAME,
+  stageLocalArtifacts,
+} = require('./artifacts');
+
+
+const PACKAGE_ROOT = path.resolve(__dirname, '..');
+const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
+const originalPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
+const backupDir = fs.mkdtempSync(path.join(PACKAGE_ROOT, '.zvec-pack-local-'));
+const bundledEntries = [BINARY_FILENAME, JIEBA_DICT_DIRNAME];
+
+
+function backupBundledEntries() {
+  for (const entry of bundledEntries) {
+    const sourcePath = path.join(PACKAGE_ROOT, entry);
+    if (fs.existsSync(sourcePath)) {
+      fs.renameSync(sourcePath, path.join(backupDir, entry));
+    }
+  }
+}
+
+
+function restoreBundledEntries() {
+  for (const entry of bundledEntries) {
+    const targetPath = path.join(PACKAGE_ROOT, entry);
+    const backupPath = path.join(backupDir, entry);
+    fs.rmSync(targetPath, { recursive: true, force: true });
+    if (fs.existsSync(backupPath)) {
+      fs.renameSync(backupPath, targetPath);
+    }
+  }
+  fs.rmSync(backupDir, { recursive: true, force: true });
+}
 
 
 try {
-  const PACKAGE_ROOT = path.resolve(__dirname, '..');
-
   // Build the bindings
   execSync('npm run build', { stdio: 'inherit', cwd: PACKAGE_ROOT });
 
-  // Verify the platform package exists
-  const platform = process.platform;
-  const arch = process.arch;
-  const platformPackageDir = path.join(PACKAGE_ROOT, 'packages', `bindings-${platform}-${arch}`);
-  const targetPath = path.join(platformPackageDir, 'zvec_node_binding.node');
-  if (!fs.existsSync(targetPath)) {
-    throw new Error(`Platform package does not exist: ${targetPath}`);
-  }
-
-  // Copy the binary to the root directory
-  const destPath = path.join(PACKAGE_ROOT, 'zvec_node_binding.node');
-  fs.copyFileSync(targetPath, destPath);
-  console.log(`Binary copied from ${targetPath} to ${destPath}`);
-
-  // Local packs bundle runtime assets at the root, mirroring the platform
-  // package layout used by normal optional-dependency installs.
-  const jiebaDictPath = path.join(platformPackageDir, 'jieba_dict');
-  if (!fs.existsSync(jiebaDictPath)) {
-    throw new Error(`Jieba dictionary directory not found at ${jiebaDictPath}`);
-  }
-  const jiebaDictDestPath = path.join(PACKAGE_ROOT, 'jieba_dict');
-  fs.cpSync(jiebaDictPath, jiebaDictDestPath, { recursive: true, force: true });
-  console.log(`Jieba dictionary copied from ${jiebaDictPath} to ${jiebaDictDestPath}`);
+  // A local package bundles the just-built addon directly in the main package.
+  // Preserve any existing local artifacts and restore them after packing.
+  backupBundledEntries();
+  const staged = stageLocalArtifacts(PACKAGE_ROOT);
+  console.log(`Binary staged for local package at ${staged.binaryPath}`);
+  console.log(`Jieba dictionary staged at ${staged.jiebaDictDir}`);
 
   // Temporarily remove optionalDependencies from package.json
   // (local pack bundles the binary directly, no need for platform packages)
-  const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
-  const originalPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
   const pkg = JSON.parse(originalPackageJson);
   delete pkg.optionalDependencies;
   fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
 
-  try {
-    // Pack
-    execSync('npm pack', { stdio: 'inherit', cwd: PACKAGE_ROOT, encoding: 'utf8' });
-  } finally {
-    // Restore original package.json
-    fs.writeFileSync(packageJsonPath, originalPackageJson);
-  }
+  // Pack
+  execSync('npm pack', { stdio: 'inherit', cwd: PACKAGE_ROOT, encoding: 'utf8' });
 } catch (error) {
   console.error('❌ Error during build and packaging:', error.message);
-  process.exit(1);
+  process.exitCode = 1;
+} finally {
+  fs.writeFileSync(packageJsonPath, originalPackageJson);
+  restoreBundledEntries();
 }
