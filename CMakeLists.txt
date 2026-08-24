@@ -67,6 +67,19 @@ else()
     )
 endif()
 
+# ExternalProject preserves zvec's files, but not its CMake target graph. On
+# Linux x86-64, native zvec keeps the runtime-dispatched RaBitQ implementation
+# in a separate static archive and propagates it through
+# rabitqlib -> rabitqlib_runtime. libzvec_core.a therefore contains callers,
+# not these implementations, so forward the archive explicitly when linking
+# the addon. Other platforms disable RaBitQ and do not produce this archive.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+    CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+    set(ZVEC_RABITQ_RUNTIME_LIB
+        ${ZVEC_LIB_DIR}/librabitqlib_runtime.a)
+    list(APPEND ZVEC_BYPRODUCTS ${ZVEC_RABITQ_RUNTIME_LIB})
+endif()
+
 
 # External build of zvec
 include(ExternalProject)
@@ -134,6 +147,9 @@ find_package(Threads REQUIRED)
 set(zvec_core_deps
     zvec_turbo
 )
+if(ZVEC_RABITQ_RUNTIME_LIB)
+    list(APPEND zvec_core_deps ${ZVEC_RABITQ_RUNTIME_LIB})
+endif()
 
 if (NOT WIN32)
     set(zvec_ailego_deps
@@ -347,6 +363,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     SUFFIX ".node"
     OUTPUT_NAME "zvec_node_binding"
 )
+
+if(UNIX AND NOT APPLE)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY SKIP_BUILD_RPATH TRUE)
+endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
