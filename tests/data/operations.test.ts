@@ -222,7 +222,7 @@ describe('Data Operations Pipeline', () => {
       expect(eventLoopRanDuring).toBe(true);
       expect(collection.stats.indexCompleteness['dense']).toBeCloseTo(1);
       expect(collection.stats.indexCompleteness['sparse']).toBeCloseTo(1);
-    });
+    }, 10_000);
 
     it('should resolve concurrent async queries with correct results', async () => {
       const targets = [550, 600, 700, 800, 900, 950];

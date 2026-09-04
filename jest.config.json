@@ -1,5 +1,6 @@
 {
   "testEnvironment": "node",
+  "maxWorkers": 1,
   "testMatch": [
     "<rootDir>/tests/*.test.ts",
     "<rootDir>/tests/**/*.test.ts"
