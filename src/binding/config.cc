@@ -34,6 +34,9 @@ Napi::Object CreateIOBackendTypeObject(Napi::Env env) {
   obj.Set("LIBAIO", static_cast<uint8_t>(zvec::ailego::IOBackendType::kLibAio));
   obj.Set("IO_URING",
           static_cast<uint8_t>(zvec::ailego::IOBackendType::kIoUring));
+  obj.Set(
+      "WINDOWS_OVERLAPPED",
+      static_cast<uint8_t>(zvec::ailego::IOBackendType::kWindowsOverlapped));
   obj.Freeze();
   return obj;
 }

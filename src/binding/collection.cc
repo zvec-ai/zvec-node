@@ -614,7 +614,7 @@ Napi::Value Collection::QueryAsync(const Napi::CallbackInfo &info) {
 
   if (auto parsed_query = ParseSearchQuery(info[0], get_wrapped_schema());
       parsed_query) {
-    auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
+    auto *worker = new QueryWorker(env, collection_,
                                    std::move(parsed_query.value()), deferred);
     worker->Queue();
     return deferred.Promise();
@@ -672,7 +672,7 @@ Napi::Value Collection::MultiQueryAsync(const Napi::CallbackInfo &info) {
 
   if (auto parsed_query = ParseMultiQuery(info[0], get_wrapped_schema());
       parsed_query) {
-    auto *worker = new QueryWorker(env, collection_, get_wrapped_schema(),
+    auto *worker = new QueryWorker(env, collection_,
                                    std::move(parsed_query.value()), deferred);
     worker->Queue();
     return deferred.Promise();

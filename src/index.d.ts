@@ -143,6 +143,8 @@ export declare const ZVecIOBackendType: {
   readonly LIBAIO: 1;
   /** Asynchronous I/O through Linux io_uring. */
   readonly IO_URING: 2;
+  /** Asynchronous overlapped I/O on Windows. */
+  readonly WINDOWS_OVERLAPPED: 3;
 };
 
 export type ZVecIOBackendType = typeof ZVecIOBackendType[keyof typeof ZVecIOBackendType];

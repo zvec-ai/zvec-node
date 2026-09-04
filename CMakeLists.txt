@@ -317,6 +317,7 @@ add_dependencies(${PROJECT_NAME} zvec)
 target_include_directories(${PROJECT_NAME}
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api
+    ${ZVEC_SOURCE_DIR}/src
     ${CMAKE_JS_INC}
 )
 

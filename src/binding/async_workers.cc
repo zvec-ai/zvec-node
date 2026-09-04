@@ -1,4 +1,5 @@
 #include "async_workers.h"
+#include "db/collection_query_internal.h"
 #include "doc.h"
 #include "types.h"
 
@@ -30,33 +31,32 @@ void DeleteByFilterWorker::OnError(const Napi::Error &error) {
 
 
 QueryWorker::QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
-                         zvec::CollectionSchema::Ptr schema,
                          zvec::SearchQuery query,
                          Napi::Promise::Deferred deferred)
     : Napi::AsyncWorker(env),
       collection_(collection),
-      schema_(schema),
       query_(std::move(query)),
       deferred_(deferred) {}
 
 QueryWorker::QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
-                         zvec::CollectionSchema::Ptr schema,
                          zvec::MultiQuery query,
                          Napi::Promise::Deferred deferred)
     : Napi::AsyncWorker(env),
       collection_(collection),
-      schema_(schema),
       query_(std::move(query)),
       deferred_(deferred) {}
 
 void QueryWorker::Execute() {
   auto res = std::visit(
-      [this](const auto &query) -> zvec::Result<zvec::DocPtrList> {
-        return collection_->query(query);
+      [this](const auto &query)
+          -> zvec::Result<zvec::internal::QueryResultSnapshot> {
+        return zvec::internal::query_result_snapshot(*collection_, query);
       },
       query_);
   if (res) {
-    results_ = std::move(res.value());
+    auto snapshot = std::move(res.value());
+    results_ = std::move(snapshot.docs);
+    schema_ = std::move(snapshot.schema);
   } else {
     status_ = res.error();
   }

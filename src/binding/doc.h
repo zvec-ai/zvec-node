@@ -2,6 +2,7 @@
 
 
 #include <napi.h>
+#include <memory>
 #include <zvec/db/doc.h>
 #include <zvec/db/query.h>
 
@@ -45,15 +46,17 @@ zvec::Status ParseScalarArray(const Napi::Array &array,
                               const std::string &fieldName,
                               zvec::FieldSchema *schema, zvec::Doc *doc);
 
-Napi::Object CreateDoc(Napi::Env env, zvec::CollectionSchema::Ptr schema,
-                       zvec::Doc::Ptr doc);
+Napi::Object CreateDoc(
+    Napi::Env env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    zvec::Doc::Ptr doc);
 
-Napi::Array CreateGroupResults(Napi::Env env,
-                               zvec::CollectionSchema::Ptr schema,
-                               const zvec::GroupResults &results);
+Napi::Array CreateGroupResults(
+    Napi::Env env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    const zvec::GroupResults &results);
 
-Napi::Object CreateVectors(Napi::Env &env, zvec::CollectionSchema::Ptr &schema,
-                           zvec::Doc::Ptr &doc);
+Napi::Object CreateVectors(
+    Napi::Env &env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    zvec::Doc::Ptr &doc);
 
 Napi::Array CreateVectorArray(Napi::Env &env, const std::string &vectorName,
                               zvec::FieldSchema *schema, zvec::Doc::Ptr &doc);
@@ -61,8 +64,9 @@ Napi::Array CreateVectorArray(Napi::Env &env, const std::string &vectorName,
 Napi::Object CreateVectorObject(Napi::Env &env, const std::string &vectorName,
                                 zvec::FieldSchema *schema, zvec::Doc::Ptr &doc);
 
-Napi::Object CreateFields(Napi::Env &env, zvec::CollectionSchema::Ptr &schema,
-                          zvec::Doc::Ptr &doc);
+Napi::Object CreateFields(
+    Napi::Env &env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    zvec::Doc::Ptr &doc);
 
 Napi::Array CreateScalarArray(Napi::Env &env, const std::string &fieldName,
                               zvec::FieldSchema *schema, zvec::Doc::Ptr &doc);

@@ -611,8 +611,9 @@ zvec::Status ParseScalarArray(const Napi::Array &array,
 }
 
 
-Napi::Object CreateDoc(Napi::Env env, zvec::CollectionSchema::Ptr schema,
-                       zvec::Doc::Ptr doc) {
+Napi::Object CreateDoc(
+    Napi::Env env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    zvec::Doc::Ptr doc) {
   auto obj = Napi::Object::New(env);
   obj.Set("id", doc->pk());
   obj.Set("score", doc->score());
@@ -627,9 +628,9 @@ Napi::Object CreateDoc(Napi::Env env, zvec::CollectionSchema::Ptr schema,
 }
 
 
-Napi::Array CreateGroupResults(Napi::Env env,
-                               zvec::CollectionSchema::Ptr schema,
-                               const zvec::GroupResults &results) {
+Napi::Array CreateGroupResults(
+    Napi::Env env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    const zvec::GroupResults &results) {
   auto groups = Napi::Array::New(env, results.size());
   for (size_t i = 0; i < results.size(); ++i) {
     auto group = Napi::Object::New(env);
@@ -646,8 +647,9 @@ Napi::Array CreateGroupResults(Napi::Env env,
 }
 
 
-Napi::Object CreateVectors(Napi::Env &env, zvec::CollectionSchema::Ptr &schema,
-                           zvec::Doc::Ptr &doc) {
+Napi::Object CreateVectors(
+    Napi::Env &env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    zvec::Doc::Ptr &doc) {
   auto obj = Napi::Object::New(env);
   for (const auto &vec_schema : schema->vector_fields()) {
     const std::string &vec = vec_schema->name();
@@ -744,8 +746,9 @@ Napi::Object CreateVectorObject(Napi::Env &env, const std::string &vectorName,
 }
 
 
-Napi::Object CreateFields(Napi::Env &env, zvec::CollectionSchema::Ptr &schema,
-                          zvec::Doc::Ptr &doc) {
+Napi::Object CreateFields(
+    Napi::Env &env, const std::shared_ptr<const zvec::CollectionSchema> &schema,
+    zvec::Doc::Ptr &doc) {
   auto obj = Napi::Object::New(env);
   for (const auto &field_schema : schema->forward_fields()) {
     const std::string &field = field_schema->name();

@@ -2,6 +2,7 @@
 
 
 #include <napi.h>
+#include <memory>
 #include <string>
 #include <variant>
 #include <zvec/db/collection.h>
@@ -31,12 +32,10 @@ class DeleteByFilterWorker : public Napi::AsyncWorker {
 class QueryWorker : public Napi::AsyncWorker {
  public:
   QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
-              zvec::CollectionSchema::Ptr schema, zvec::SearchQuery query,
-              Napi::Promise::Deferred deferred);
+              zvec::SearchQuery query, Napi::Promise::Deferred deferred);
 
   QueryWorker(Napi::Env env, zvec::Collection::Ptr collection,
-              zvec::CollectionSchema::Ptr schema, zvec::MultiQuery query,
-              Napi::Promise::Deferred deferred);
+              zvec::MultiQuery query, Napi::Promise::Deferred deferred);
 
   void Execute() override;
   void OnOK() override;
@@ -44,7 +43,7 @@ class QueryWorker : public Napi::AsyncWorker {
 
  private:
   zvec::Collection::Ptr collection_;
-  zvec::CollectionSchema::Ptr schema_;
+  std::shared_ptr<const zvec::CollectionSchema> schema_;
   std::variant<zvec::SearchQuery, zvec::MultiQuery> query_;
   Napi::Promise::Deferred deferred_;
   zvec::Status status_;
