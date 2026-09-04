@@ -107,7 +107,15 @@ jobs:
         run: docker rm -f "$MUSL_CONTAINER" || true
 
   publish-macos-bindings:
-    runs-on: macos-latest
+    name: Publish Bindings (${{ matrix.name }})
+    strategy:
+      matrix:
+        include:
+          - name: macOS arm64
+            runner: macos-latest
+          - name: macOS x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout Code
@@ -133,7 +141,15 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-windows-bindings:
-    runs-on: windows-2022
+    name: Publish Bindings (${{ matrix.name }})
+    strategy:
+      matrix:
+        include:
+          - name: Windows x64
+            runner: windows-2022
+          - name: Windows arm64
+            runner: windows-11-vs2026-arm
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout Code
@@ -147,14 +163,44 @@ jobs:
           node-version: "22.x"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install Dependencies
+      - name: Setup Python (Windows arm64)
+        if: runner.arch == 'ARM64'
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Setup MSVC Environment (Windows arm64)
+        if: runner.arch == 'ARM64'
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+        with:
+          arch: arm64
+
+      - name: Install Dependencies (Windows x64)
+        if: runner.arch == 'X64'
         run: |
           Invoke-WebRequest -Uri "https://cmake.org/files/v3.27/cmake-3.27.9-windows-x86_64.zip" -OutFile cmake.zip
           Expand-Archive cmake.zip -DestinationPath cmake
           echo "$((Resolve-Path cmake\cmake-3.27.9-windows-x86_64\bin).Path)" >> $env:GITHUB_PATH
           npm install --ignore-scripts
 
-      - name: Build and Publish Bindings
+      - name: Install Dependencies (Windows arm64)
+        if: runner.arch == 'ARM64'
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip cmake==3.30.0 ninja==1.11.1
+          npm install --ignore-scripts
+
+      - name: Build and Publish Bindings (Windows x64)
+        if: runner.arch == 'X64'
         run: npm run publish:bindings -- --force
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Build and Publish Bindings (Windows arm64)
+        if: runner.arch == 'ARM64'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          ZVEC_CMAKE_GENERATOR: Ninja
+        run: |
+          $env:RC = (Get-Command rc.exe -CommandType Application -ErrorAction Stop).Source
+          npm run publish:bindings -- --force

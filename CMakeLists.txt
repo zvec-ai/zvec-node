@@ -371,6 +371,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME "zvec_node_binding"
 )
 
+if(WIN32)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
+endif()
+
 if(UNIX)
     set_property(TARGET ${PROJECT_NAME} PROPERTY SKIP_BUILD_RPATH TRUE)
 endif()
