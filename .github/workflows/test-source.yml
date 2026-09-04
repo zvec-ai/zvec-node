@@ -160,7 +160,9 @@ jobs:
         if: runner.arch == 'ARM64'
         env:
           ZVEC_CMAKE_GENERATOR: Ninja
-        run: npm run dev
+        run: |
+          $env:RC = (Get-Command rc.exe -CommandType Application -ErrorAction Stop).Source
+          npm run dev
 
       - name: Run Unit Tests
         run: npm run test:unit
