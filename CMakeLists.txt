@@ -115,6 +115,7 @@ ExternalProject_Add(zvec
     INSTALL_COMMAND "" # Skip installation
     CMAKE_ARGS ${ZVEC_CMAKE_ARGS}
     BUILD_ALWAYS ON
+    USES_TERMINAL_BUILD TRUE
     TEST_COMMAND ""
     BUILD_BYPRODUCTS
         ${ZVEC_BYPRODUCTS}
@@ -326,6 +327,10 @@ target_link_libraries(${PROJECT_NAME}
     ${CMAKE_JS_LIB}
     zvec-db
 )
+
+if(MSVC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE delayimp)
+endif()
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
