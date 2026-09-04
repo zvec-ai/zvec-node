@@ -14,6 +14,7 @@ const {
 // Build variables
 const IS_WINDOWS = process.platform === 'win32';
 const JOBS = os.cpus().length;
+const CMAKE_GENERATOR = process.env.ZVEC_CMAKE_GENERATOR;
 const BUILD_TYPE = process.argv.includes('--debug') ? 'Debug'
   : process.argv.includes('--release') ? 'Release'
     : process.env.BUILD_TYPE || process.env.npm_config_build_type || 'Release';
@@ -26,6 +27,10 @@ console.log(`Building Zvec Node.js binding ...`);
 
 
 try {
+  if (CMAKE_GENERATOR !== undefined && CMAKE_GENERATOR !== 'Ninja') {
+    throw new Error('ZVEC_CMAKE_GENERATOR only supports "Ninja".');
+  }
+
   const expectedPrebuiltTarget = readExpectedPrebuiltTarget();
   if (expectedPrebuiltTarget !== null) {
     const prebuiltTarget = resolvePrebuiltTargetForPackaging();
@@ -34,7 +39,9 @@ try {
 
   // Compile
   const cmdParts = ['cmake-js'];
-  if (!IS_WINDOWS) {
+  if (CMAKE_GENERATOR === 'Ninja') {
+    cmdParts.push('--generator=Ninja');
+  } else if (!IS_WINDOWS) {
     cmdParts.push('--prefer-make');
   }
   cmdParts.push(`--out=${BUILD_DIR}`);

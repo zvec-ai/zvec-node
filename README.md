@@ -43,8 +43,8 @@ npm install @zvec/zvec
 ### ✅ Supported Platforms
 
 - Linux (x86_64, ARM64)
-- macOS (ARM64)
-- Windows (x86_64)
+- macOS (x86_64, ARM64)
+- Windows (x86_64, ARM64)
 
 ### 🛠️ Building from Source
 

@@ -1,0 +1,17 @@
+{
+  "name": "@zvec/bindings-win32-arm64",
+  "license": "Apache-2.0",
+  "version": "0.7.0",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "zvec_node_binding.node",
+  "files": [
+    "zvec_node_binding.node",
+    "jieba_dict/jieba.dict.utf8",
+    "jieba_dict/hmm_model.utf8"
+  ]
+}

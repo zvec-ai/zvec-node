@@ -3,10 +3,12 @@ const { familySync, GLIBC, MUSL } = require('detect-libc');
 
 const PREBUILT_TARGETS = Object.freeze([
   'darwin-arm64',
+  'darwin-x64',
   'linux-arm64',
   'linux-arm64-musl',
   'linux-x64',
   'linux-x64-musl',
+  'win32-arm64',
   'win32-x64',
 ]);
 const PREBUILT_TARGET_SET = new Set(PREBUILT_TARGETS);
