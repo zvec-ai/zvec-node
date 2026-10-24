@@ -7,6 +7,38 @@ const path = require('path');
 const readline = require('readline');
 
 
+function isLocalDependency(spec) {
+  if (typeof spec !== 'string') return false;
+  const value = spec.trim();
+  if (/^(?:(?:git\+)?file:|link:|workspace:|\.|[\\/]|~[\\/]|[a-z]:)/i.test(value)) {
+    return true;
+  }
+  // Remote URLs, Git URLs and npm aliases are not filesystem paths.
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) return false;
+  if (/^[^@\s]+@[^:\s]+:.+/.test(value)) return false;
+  if (/^[a-z\d-]+\/[\w.-]+(?:#[^%]*)?$/i.test(value)) return false;
+  return /\.(?:tgz|tar(?:\.gz)?)$/i.test(value) || /[\\/]/.test(value);
+}
+
+
+function assertPublishableDependencies(packageJson, manifestPath) {
+  const localDependencies = [];
+  for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    for (const [name, spec] of Object.entries(packageJson[field] || {})) {
+      if (isLocalDependency(spec)) localDependencies.push(`  ${field}.${name}: ${spec}`);
+    }
+  }
+  if (localDependencies.length) {
+    throw new Error(
+      `Cannot publish ${manifestPath} with local dependencies:\n` +
+      localDependencies.join('\n') +
+      '\nRestore published versions or remote dependency references before publishing. ' +
+      '--force only skips confirmation; it does not bypass this check.'
+    );
+  }
+}
+
+
 const shouldForce = process.argv.includes('-f') || process.argv.includes('--force');
 
 
@@ -17,6 +49,18 @@ const rl = readline.createInterface({
 
 
 function publish(packageName, version, packageDir) {
+  for (const runtimeAsset of [
+    'zvec_node_binding.node',
+    'jieba_dict'
+  ]) {
+    const generatedPath = path.join(packageDir, runtimeAsset);
+    if (fs.existsSync(generatedPath)) {
+      console.warn(`⚠️ Found stray runtime asset: ${generatedPath}`);
+      fs.rmSync(generatedPath, { recursive: true, force: true });
+      console.log(`✅ Removed ${generatedPath} to prevent accidental inclusion in the generic package...`);
+    }
+  }
+
   execSync('npm publish --access public', { stdio: 'inherit', cwd: packageDir });
   console.log(`\n✅ Success! ${packageName}@${version} has been published.`);
 }
@@ -27,18 +71,7 @@ try {
   const PACKAGE_ROOT = path.resolve(__dirname, '..');
   const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-
-  for (const runtimeAsset of [
-    'zvec_node_binding.node',
-    'jieba_dict'
-  ]) {
-    const generatedPath = path.join(PACKAGE_ROOT, runtimeAsset);
-    if (fs.existsSync(generatedPath)) {
-      console.warn(`⚠️ Found stray runtime asset: ${generatedPath}`);
-      fs.rmSync(generatedPath, { recursive: true, force: true });
-      console.log(`✅ Removed ${generatedPath} to prevent accidental inclusion in the generic package...`);
-    }
-  }
+  assertPublishableDependencies(packageJson, packageJsonPath);
 
   if (shouldForce) {
     console.log('\n🤖 --force flag detected. Skipping confirmation...');

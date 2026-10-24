@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { resolvePrebuiltTargetForPackaging } = require('../src/prebuilt');
-const { stagePrebuiltArtifacts } = require('./artifacts');
+const { stagePrebuiltArtifacts } = require('./lib/artifacts');
 
 
 const shouldForce = process.argv.includes('-f') || process.argv.includes('--force');

@@ -7,7 +7,7 @@ const {
   assertUniformBindingVersion,
   getBindingPackages,
   syncBindingOptionalDependencies,
-} = require('./binding-packages');
+} = require('./lib/binding-packages');
 
 const type = process.argv[2];
 
@@ -38,14 +38,20 @@ execSync(`npm version ${type} --no-git-tag-version`, {
   stdio: "inherit",
 });
 
+console.log("\nSyncing package-lock.json");
+const bindingNames = bindingPackages.map(({ packageJson }) => packageJson.name).join(" ");
+execSync(`npm update --package-lock-only --ignore-scripts ${bindingNames}`, {
+  cwd: root,
+  stdio: "inherit",
+});
+
 // Read the new version
 const newVersion = JSON.parse(fs.readFileSync(rootPkgPath, "utf8")).version;
 
 console.log("\n✅ Main package version bump completed");
 console.log("\n📝 Next steps:");
-console.log("   1. npm install --ignore-scripts");
-console.log("   2. git add .");
-console.log(`   3. git commit -m 'chore(release): bump main to v${newVersion}'`);
-console.log(`   4. git tag v${newVersion}`);
-console.log("   5. git push && git push --tags");
-console.log("   6. npm run publish:main");
+console.log("   1. git add .");
+console.log(`   2. git commit -m 'chore(release): bump main to v${newVersion}'`);
+console.log(`   3. git tag v${newVersion}`);
+console.log("   4. git push && git push --tags");
+console.log("   5. npm run publish:main");

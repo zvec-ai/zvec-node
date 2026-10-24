@@ -8,7 +8,7 @@ const {
   BINARY_FILENAME,
   JIEBA_DICT_DIRNAME,
   stageLocalArtifacts,
-} = require('./artifacts');
+} = require('./lib/artifacts');
 
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
@@ -16,6 +16,7 @@ const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
 const originalPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
 const backupDir = fs.mkdtempSync(path.join(PACKAGE_ROOT, '.zvec-pack-local-'));
 const bundledEntries = [BINARY_FILENAME, JIEBA_DICT_DIRNAME];
+const entriesToRestore = [];
 
 
 function backupBundledEntries() {
@@ -24,12 +25,14 @@ function backupBundledEntries() {
     if (fs.existsSync(sourcePath)) {
       fs.renameSync(sourcePath, path.join(backupDir, entry));
     }
+    // Restore only entries whose original state has been safely preserved.
+    entriesToRestore.push(entry);
   }
 }
 
 
 function restoreBundledEntries() {
-  for (const entry of bundledEntries) {
+  for (const entry of entriesToRestore) {
     const targetPath = path.join(PACKAGE_ROOT, entry);
     const backupPath = path.join(backupDir, entry);
     fs.rmSync(targetPath, { recursive: true, force: true });

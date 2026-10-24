@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { resolvePrebuiltTargetForPackaging } = require('../src/prebuilt');
-const { stagePrebuiltArtifacts } = require('./artifacts');
+const { stagePrebuiltArtifacts } = require('./lib/artifacts');
 
 
 try {

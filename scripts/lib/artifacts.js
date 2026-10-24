@@ -1,3 +1,4 @@
+// Locate, verify, and stage native build artifacts for local and platform packages.
 const fs = require('fs');
 const path = require('path');
 
@@ -79,7 +80,6 @@ function stagePrebuiltArtifacts(packageRoot, prebuiltTarget, buildType = 'Releas
 module.exports = {
   BINARY_FILENAME,
   JIEBA_DICT_DIRNAME,
-  getBuildArtifacts,
   verifyBuildArtifacts,
   stageLocalArtifacts,
   stagePrebuiltArtifacts,

@@ -40,11 +40,11 @@ The official Node.js binding for [Zvec](https://github.com/alibaba/zvec), an ope
 npm install @zvec/zvec
 ```
 
-### ✅ Supported Platforms
+### ✅ Cross-Platform Support
 
-- Linux (x86_64, ARM64)
-- macOS (x86_64, ARM64)
-- Windows (x86_64, ARM64)
+Linux · macOS · Windows
+
+For more details, please see the [platform support documentation](https://zvec.org/en/docs/db/platforms/).
 
 ### 🛠️ Building from Source
 

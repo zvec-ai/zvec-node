@@ -5,7 +5,7 @@ const path = require('path');
 const {
   assertUniformBindingVersion,
   getBindingPackages,
-} = require('./binding-packages');
+} = require('./lib/binding-packages');
 
 const type = process.argv[2];
 

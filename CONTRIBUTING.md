@@ -9,7 +9,7 @@ The Zvec Node.js binding is built using [node-addon-api](https://github.com/node
 - **/src/zvec/**: Contains the core [Zvec](https://github.com/alibaba/zvec) source code (included as a Git submodule).
 - **/src/binding**: Contains the binding logic.
 - **/scripts**: Contains utilities for building, packing, and publishing the project.
-- **/packages**: Holds the compiled binaries for specific platforms. Running `npm run build` generates a binary in this directory tailored to your current platform and architecture.
+- **/packages**: Contains platform package manifests and binaries staged for distribution.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ This command will:
 
 1. Fetch necessary dependencies.
 1. Install pre-built binaries from optional dependencies based on your platform.
-1. Ensure the resulting binary is placed in the correct location for **Node.js** to load it.
+1. Run the install check to verify that the bundled binary exists or the platform package can be resolved.
 
 After installation, you can run a basic test to verify everything is working correctly:
 
@@ -122,7 +122,7 @@ npm run publish:bindings
 npm run bump:main -- <patch|minor|major>
 ```
 
-This syncs `optionalDependencies` in the root `package.json` to match the current binding versions, then bumps the main package version. Commit, tag, and push.
+This syncs `optionalDependencies` to match the current binding versions, bumps the main package version, and updates `package-lock.json`. Commit both files, tag, and push.
 
 ### 4. Publish Main Package
 

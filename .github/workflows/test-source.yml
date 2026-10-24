@@ -52,7 +52,7 @@ jobs:
       - name: Install Dependencies
         run: |
           curl -sL ${{ matrix.cmake_url }} | tar xz -C /usr/local --strip-components=1
-          npm install --ignore-scripts
+          npm ci --ignore-scripts
 
       - name: Build Binaries
         run: npm run dev
@@ -90,7 +90,7 @@ jobs:
         run: |
           curl -sL https://cmake.org/files/v3.27/cmake-3.27.9-macos-universal.tar.gz | tar xz
           echo "$(pwd)/cmake-3.27.9-macos-universal/CMake.app/Contents/bin" >> $GITHUB_PATH
-          npm install --ignore-scripts
+          npm ci --ignore-scripts
 
       - name: Build Binaries
         run: npm run dev
@@ -143,14 +143,14 @@ jobs:
           Invoke-WebRequest -Uri "https://cmake.org/files/v3.27/cmake-3.27.9-windows-x86_64.zip" -OutFile cmake.zip
           Expand-Archive cmake.zip -DestinationPath cmake
           echo "$((Resolve-Path cmake\cmake-3.27.9-windows-x86_64\bin).Path)" >> $env:GITHUB_PATH
-          npm install --ignore-scripts
+          npm ci --ignore-scripts
 
       - name: Install Dependencies (Windows arm64)
         if: runner.arch == 'ARM64'
         shell: pwsh
         run: |
           python -m pip install --upgrade pip cmake==3.30.0 ninja==1.11.1
-          npm install --ignore-scripts
+          npm ci --ignore-scripts
 
       - name: Build Binaries (Windows x64)
         if: runner.arch == 'X64'

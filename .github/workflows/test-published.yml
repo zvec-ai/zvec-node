@@ -45,40 +45,11 @@ jobs:
       - name: Debug Environment
         run: node -p "process.platform + ' ' + process.arch"
 
-      - name: Prepare Test Project
-        shell: pwsh
-        run: |
-          $testDir = Join-Path $env:RUNNER_TEMP "zvec-published-test"
-          Remove-Item -Recurse -Force $testDir -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force $testDir | Out-Null
-          Copy-Item -Recurse tests -Destination (Join-Path $testDir "tests")
-          Copy-Item jest.config.json -Destination $testDir
-          Copy-Item tsconfig.json -Destination $testDir
-          node scripts/patch-imports.js (Join-Path $testDir "tests") '@zvec/zvec'
+      - name: Install Locked Test Tools
+        run: npm ci --ignore-scripts
 
-          Set-Location $testDir
-          npm init -y
-          npm install --no-package-lock --save-dev '@types/jest@^29.5.0' 'jest@^29.7.0' 'ts-jest@^29.1.2' 'typescript@^5.9.3'
-          npm install --no-package-lock '@zvec/zvec@latest'
-
-      - name: Verify Installed Version
-        shell: pwsh
-        run: |
-          Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
-          npm ls '@zvec/zvec'
-
-      - name: Smoke Test Entry Points
-        shell: pwsh
-        run: |
-          Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
-          node -e "require('@zvec/zvec')"
-          node --input-type=module -e "await import('@zvec/zvec')"
-
-      - name: Run Unit Tests
-        shell: pwsh
-        run: |
-          Set-Location (Join-Path $env:RUNNER_TEMP "zvec-published-test")
-          npx jest
+      - name: Test Published Package
+        run: npm run test:package
 
   test-published-musl:
     name: Test Published (${{ matrix.name }})
@@ -88,10 +59,8 @@ jobs:
         include:
           - name: Linux x64 musl
             runner: ubuntu-24.04
-            bindings_package: "@zvec/bindings-linux-x64-musl"
           - name: Linux arm64 musl
             runner: ubuntu-24.04-arm
-            bindings_package: "@zvec/bindings-linux-arm64-musl"
     runs-on: ${{ matrix.runner }}
     env:
       MUSL_CONTAINER: zvec-node-published-musl
@@ -103,54 +72,15 @@ jobs:
       - name: Start musllinux Container
         run: |
           docker run -d --name "$MUSL_CONTAINER" \
-            -v "$GITHUB_WORKSPACE:/work:ro" \
+            -v "$GITHUB_WORKSPACE:/work" \
             -w /work \
             node:22-alpine sleep infinity
 
-      - name: Prepare Test Project
-        run: |
-          docker exec "$MUSL_CONTAINER" sh -c '
-              TEST_DIR=/tmp/zvec-published-test
-              rm -rf "$TEST_DIR"
-              mkdir -p "$TEST_DIR"
-              cp -R /work/tests "$TEST_DIR/tests"
-              cp /work/jest.config.json /work/tsconfig.json "$TEST_DIR"
-              node /work/scripts/patch-imports.js "$TEST_DIR/tests" "@zvec/zvec"
+      - name: Install Locked Test Tools
+        run: docker exec "$MUSL_CONTAINER" npm ci --ignore-scripts
 
-              cd "$TEST_DIR"
-              npm init -y
-              npm install --no-package-lock --save-dev \
-                "@types/jest@^29.5.0" \
-                "jest@^29.7.0" \
-                "ts-jest@^29.1.2" \
-                "typescript@^5.9.3"
-              npm install --no-package-lock "@zvec/zvec@latest"
-            '
-
-      - name: Verify Installed Version
-        run: |
-          docker exec \
-            -w /tmp/zvec-published-test \
-            "$MUSL_CONTAINER" \
-            npm ls '@zvec/zvec' "${{ matrix.bindings_package }}"
-
-      - name: Smoke Test Entry Points
-        run: |
-          docker exec \
-            -w /tmp/zvec-published-test \
-            "$MUSL_CONTAINER" \
-            node -e "require('@zvec/zvec')"
-          docker exec \
-            -w /tmp/zvec-published-test \
-            "$MUSL_CONTAINER" \
-            node --input-type=module -e "await import('@zvec/zvec')"
-
-      - name: Run Unit Tests
-        run: |
-          docker exec \
-            -w /tmp/zvec-published-test \
-            "$MUSL_CONTAINER" \
-            npx jest --runInBand
+      - name: Test Published Package
+        run: docker exec "$MUSL_CONTAINER" npm run test:package
 
       - name: Tear Down musllinux Container
         if: always()

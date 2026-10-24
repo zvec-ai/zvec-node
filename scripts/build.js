@@ -4,7 +4,7 @@
 const { execSync } = require('child_process');
 const os = require('os');
 const path = require('path');
-const { verifyBuildArtifacts } = require('./artifacts');
+const { verifyBuildArtifacts } = require('./lib/artifacts');
 const {
   readExpectedPrebuiltTarget,
   resolvePrebuiltTargetForPackaging,

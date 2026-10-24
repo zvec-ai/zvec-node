@@ -1,6 +1,7 @@
+// Read platform package manifests, check versions, and sync main-package dependencies.
 const fs = require('fs');
 const path = require('path');
-const { PREBUILT_TARGETS } = require('../src/prebuilt');
+const { PREBUILT_TARGETS } = require('../../src/prebuilt');
 
 
 function getBindingPackages(packageRoot) {
