@@ -3,15 +3,13 @@ export {
   ZVecCollectionSchema,
   ZVecCreateAndOpen,
   ZVecDataType,
-  ZVecGetDefaultJiebaDictDir,
   ZVecGetIOBackendDescription,
   ZVecGetIOBackendType, ZVecIndexType,
   ZVecInitialize, ZVecIOBackendType, ZVecLogLevel,
   ZVecLogType,
   ZVecMetricType,
   ZVecOpen,
-  ZVecQuantizeType,
-  ZVecSetDefaultJiebaDictDir
+  ZVecQuantizeType
 } from './index.js';
 
 export type {
@@ -62,8 +60,6 @@ declare const _default: {
   ZVecIOBackendType: typeof import('./index.js').ZVecIOBackendType;
   ZVecCollectionSchema: typeof import('./index.js').ZVecCollectionSchema;
   ZVecInitialize: typeof import('./index.js').ZVecInitialize;
-  ZVecSetDefaultJiebaDictDir: typeof import('./index.js').ZVecSetDefaultJiebaDictDir;
-  ZVecGetDefaultJiebaDictDir: typeof import('./index.js').ZVecGetDefaultJiebaDictDir;
   ZVecGetIOBackendType: typeof import('./index.js').ZVecGetIOBackendType;
   ZVecGetIOBackendDescription: typeof import('./index.js').ZVecGetIOBackendDescription;
   ZVecCreateAndOpen: typeof import('./index.js').ZVecCreateAndOpen;

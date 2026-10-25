@@ -195,9 +195,14 @@ describe('CollectionSchema', () => {
   });
 
 
-  const isLinuxX64 = process.platform === 'linux' && process.arch === 'x64';
+  const supportsRabitq = process.arch === 'x64' &&
+    (process.platform === 'linux' || process.platform === 'win32');
+  const supportsDiskAnn =
+    (process.platform === 'linux' && (process.arch === 'x64' || process.arch === 'arm64')) ||
+    (process.platform === 'darwin' && process.arch === 'arm64') ||
+    (process.platform === 'win32' && process.arch === 'x64');
 
-  (isLinuxX64 ? it : it.skip)('should parse HNSW-RaBitQ index params correctly', () => {
+  (supportsRabitq ? it : it.skip)('should parse HNSW-RaBitQ index params correctly', () => {
     const schema = new ZVecCollectionSchema({
       name: 'test_hnsw_rabitq',
       vectors: [
@@ -255,7 +260,7 @@ describe('CollectionSchema', () => {
   });
 
 
-  (isLinuxX64 ? it : it.skip)('should parse DiskANN index params correctly', () => {
+  (supportsDiskAnn ? it : it.skip)('should parse DiskANN index params correctly', () => {
     const schema = new ZVecCollectionSchema({
       name: 'test_diskann',
       vectors: [

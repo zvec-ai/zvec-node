@@ -221,12 +221,6 @@ export interface ZVecInitOptions {
    * @default undefined
    */
   readonly ftsBruteForceByKeysRatio?: number;
-
-  /**
-   * Directory containing jieba tokenizer dictionary files.
-   * @default undefined
-   */
-  readonly jiebaDictDir?: string;
 }
 
 
@@ -238,20 +232,6 @@ export interface ZVecInitOptions {
  * @group Global Configuration
  */
 export function ZVecInitialize(options: ZVecInitOptions): void;
-
-/**
- * Registers the process-wide default jieba dictionary directory.
- *
- * @group Global Configuration
- */
-export function ZVecSetDefaultJiebaDictDir(dir: string): void;
-
-/**
- * Reads the process-wide default jieba dictionary directory.
- *
- * @group Global Configuration
- */
-export function ZVecGetDefaultJiebaDictDir(): string;
 
 /**
  * Returns the active I/O backend used for DiskANN disk reads.
@@ -368,8 +348,6 @@ export interface ZVecHnswIndexParams extends ZVecIndexParams {
  * HNSW RaBitQ combines HNSW graph-based search with RaBitQ quantization
  * for improved memory efficiency while maintaining high recall.
  *
- * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
- *
  * @group Index Parameters
  */
 export interface ZVecHnswRabitqIndexParams extends ZVecIndexParams {
@@ -454,8 +432,6 @@ export interface ZVecIVFIndexParams extends ZVecIndexParams {
 
 /**
  * Configuration parameters for an IVF-RaBitQ index on a vector field.
- *
- * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
  *
  * @group Index Parameters
  */
@@ -640,13 +616,19 @@ export interface ZVecHnswQueryParams extends ZVecVectorQueryParams {
    * @default 300
    */
   readonly ef?: number;
+
+  /**
+   * Candidate multiplier used when isUsingRefiner is true; ignored otherwise.
+   * Must be finite and nonnegative. Zero uses max(topk, ef) candidates;
+   * positive values use floor(topk * scaleFactor), with a minimum of topk.
+   * @default 0
+   */
+  readonly scaleFactor?: number;
 }
 
 
 /**
  * Query-time parameters for searches performed against an HNSW-RaBitQ index.
- *
- * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
  *
  * @group Query Parameters
  */
@@ -659,6 +641,14 @@ export interface ZVecHnswRabitqQueryParams extends ZVecVectorQueryParams {
    * @default 300
    */
   readonly ef?: number;
+
+  /**
+   * Candidate multiplier used when isUsingRefiner is true; ignored otherwise.
+   * Must be finite and nonnegative. Zero uses max(topk, ef) candidates;
+   * positive values use floor(topk * scaleFactor), with a minimum of topk.
+   * @default 0
+   */
+  readonly scaleFactor?: number;
 }
 
 
@@ -676,13 +666,19 @@ export interface ZVecIVFQueryParams extends ZVecVectorQueryParams {
    * @default 10
    */
   readonly nprobe?: number;
+
+  /**
+   * Candidate multiplier used when isUsingRefiner is true; ignored otherwise.
+   * Must be finite and nonnegative. Uses floor(topk * scaleFactor), with
+   * a minimum of topk candidates (including when zero).
+   * @default 10
+   */
+  readonly scaleFactor?: number;
 }
 
 
 /**
  * Query-time parameters for searches performed against an IVF-RaBitQ index.
- *
- * **Platform support:** Only available on Linux x86_64 with AVX2/AVX-512.
  *
  * @group Query Parameters
  */
@@ -1659,8 +1655,6 @@ declare const _default: {
   ZVecIOBackendType: typeof ZVecIOBackendType;
   ZVecCollectionSchema: typeof ZVecCollectionSchema;
   ZVecInitialize: typeof ZVecInitialize;
-  ZVecSetDefaultJiebaDictDir: typeof ZVecSetDefaultJiebaDictDir;
-  ZVecGetDefaultJiebaDictDir: typeof ZVecGetDefaultJiebaDictDir;
   ZVecGetIOBackendType: typeof ZVecGetIOBackendType;
   ZVecGetIOBackendDescription: typeof ZVecGetIOBackendDescription;
   ZVecCreateAndOpen: typeof ZVecCreateAndOpen;

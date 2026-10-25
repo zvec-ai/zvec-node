@@ -1366,8 +1366,19 @@ zvec::Result<zvec::HnswQueryParams::Ptr> ParseHnswQueryParams(
     }
   }
 
-  return std::make_shared<zvec::HnswQueryParams>(ef, radius, is_linear,
-                                                 is_using_refiner);
+  float scale_factor{0.0f};
+  if (obj.Has("scaleFactor")) {
+    if (!obj.Get("scaleFactor").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'scaleFactor'"));
+    }
+    scale_factor = obj.Get("scaleFactor").As<Napi::Number>().FloatValue();
+  }
+
+  auto params = std::make_shared<zvec::HnswQueryParams>(ef, radius, is_linear,
+                                                        is_using_refiner);
+  params->set_scale_factor(scale_factor);
+  return params;
 }
 
 
@@ -1413,8 +1424,17 @@ zvec::Result<zvec::HnswRabitqQueryParams::Ptr> ParseHnswRabitqQueryParams(
     }
   }
 
-  return std::make_shared<zvec::HnswRabitqQueryParams>(ef, radius, is_linear,
-                                                       is_using_refiner);
+  float scale_factor{0.0f};
+  if (obj.Has("scaleFactor")) {
+    if (!obj.Get("scaleFactor").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'scaleFactor'"));
+    }
+    scale_factor = obj.Get("scaleFactor").As<Napi::Number>().FloatValue();
+  }
+
+  return std::make_shared<zvec::HnswRabitqQueryParams>(
+      ef, radius, is_linear, is_using_refiner, scale_factor);
 }
 
 
@@ -1460,8 +1480,17 @@ zvec::Result<zvec::IVFQueryParams::Ptr> ParseIVFQueryParams(
     }
   }
 
-  auto params =
-      std::make_shared<zvec::IVFQueryParams>(nprobe, is_using_refiner);
+  float scale_factor{10.0f};
+  if (obj.Has("scaleFactor")) {
+    if (!obj.Get("scaleFactor").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'scaleFactor'"));
+    }
+    scale_factor = obj.Get("scaleFactor").As<Napi::Number>().FloatValue();
+  }
+
+  auto params = std::make_shared<zvec::IVFQueryParams>(nprobe, is_using_refiner,
+                                                       scale_factor);
   params->set_radius(radius);
   params->set_is_linear(is_linear);
   return params;

@@ -37,7 +37,6 @@ endif()
 set(ZVEC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/zvec)
 set(ZVEC_BINARY_DIR ${CMAKE_BINARY_DIR}/zvec-build)
 set(ZVEC_DEPENDENCY_LIB_DIR ${ZVEC_BINARY_DIR}/external/usr/local/lib)
-set(ZVEC_JIEBA_DICT_SRC ${ZVEC_SOURCE_DIR}/thirdparty/cppjieba/cppjieba-5.6.7/dict)
 
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(is_multi_config)
@@ -67,17 +66,40 @@ else()
     )
 endif()
 
-# ExternalProject preserves zvec's files, but not its CMake target graph. On
-# Linux x86-64, native zvec keeps the runtime-dispatched RaBitQ implementation
-# in a separate static archive and propagates it through
-# rabitqlib -> rabitqlib_runtime. libzvec_core.a therefore contains callers,
-# not these implementations, so forward the archive explicitly when linking
-# the addon. Other platforms disable RaBitQ and do not produce this archive.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
-    CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-    set(ZVEC_RABITQ_RUNTIME_LIB
-        ${ZVEC_LIB_DIR}/librabitqlib_runtime.a)
-    list(APPEND ZVEC_BYPRODUCTS ${ZVEC_RABITQ_RUNTIME_LIB})
+# ExternalProject does not preserve zvec's CMake target graph. Mirror its
+# RaBitQ support checks and forward rabitq_fastscan -> rabitq_core explicitly.
+set(ZVEC_RABITQ_SUPPORTED OFF)
+set(ZVEC_RABITQ_LIBS)
+if(NOT ANDROID AND NOT IOS AND CMAKE_SIZEOF_VOID_P EQUAL 8
+    AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$"
+    AND (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR (WIN32 AND MSVC)))
+    if(MSVC)
+        set(ZVEC_RABITQ_AVX2_FLAGS "/arch:AVX2")
+        set(ZVEC_RABITQ_AVX512_FLAGS "/arch:AVX512")
+        set(ZVEC_RABITQ_AVX512_POPCNT_FLAGS "/arch:AVX512")
+    else()
+        set(ZVEC_RABITQ_AVX2_FLAGS "-mavx2 -mfma")
+        set(ZVEC_RABITQ_AVX512_FLAGS "-mavx512f -mavx512bw -mavx512dq -mfma")
+        set(ZVEC_RABITQ_AVX512_POPCNT_FLAGS
+            "-mavx512f -mavx512bw -mavx512dq -mavx512vpopcntdq -mfma")
+    endif()
+
+    include(CheckCXXCompilerFlag)
+    set(ZVEC_RABITQ_SUPPORTED ON)
+    foreach(variant AVX2 AVX512 AVX512_POPCNT)
+        check_cxx_compiler_flag("${ZVEC_RABITQ_${variant}_FLAGS}"
+            ZVEC_COMPILER_SUPPORTS_RABITQ_${variant})
+        if(NOT ZVEC_COMPILER_SUPPORTS_RABITQ_${variant})
+            set(ZVEC_RABITQ_SUPPORTED OFF)
+        endif()
+    endforeach()
+endif()
+if(ZVEC_RABITQ_SUPPORTED)
+    foreach(component fastscan core)
+        list(APPEND ZVEC_RABITQ_LIBS
+            ${ZVEC_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}rabitq_${component}${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endforeach()
+    list(APPEND ZVEC_BYPRODUCTS ${ZVEC_RABITQ_LIBS})
 endif()
 
 
@@ -146,11 +168,8 @@ endif()
 find_package(Threads REQUIRED)
 
 set(zvec_core_deps
-    zvec_turbo
+    ${ZVEC_RABITQ_LIBS}
 )
-if(ZVEC_RABITQ_RUNTIME_LIB)
-    list(APPEND zvec_core_deps ${ZVEC_RABITQ_RUNTIME_LIB})
-endif()
 
 if (NOT WIN32)
     set(zvec_ailego_deps
@@ -221,12 +240,14 @@ else()
     )
 endif()
 
-# zvec_core: links libzvec_core.a via special flags (handled externally), but declare logical deps
+# Core and Turbo register factories through static initializers. Keep all their
+# objects so algorithms and quantizers requested by name remain available.
 add_library(zvec-core INTERFACE)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(zvec-core INTERFACE
         -Wl,--whole-archive
         zvec_core
+        zvec_turbo
         -Wl,--no-whole-archive
         -Wl,--start-group
         zvec-ailego
@@ -236,6 +257,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(APPLE)
     target_link_libraries(zvec-core INTERFACE
         "-Wl,-force_load,${ZVEC_LIB_DIR}/libzvec_core.a"
+        "-Wl,-force_load,${ZVEC_LIB_DIR}/libzvec_turbo.a"
         zvec-ailego
         ${zvec_core_deps}
     )
@@ -243,6 +265,7 @@ elseif(ANDROID)
     target_link_libraries(zvec-core INTERFACE
         -Wl,--whole-archive
         zvec_core
+        zvec_turbo
         -Wl,--no-whole-archive
         -Wl,--start-group
         zvec-ailego
@@ -252,10 +275,14 @@ elseif(ANDROID)
 elseif(WIN32)
     target_link_libraries(zvec-core INTERFACE
         zvec_core
+        zvec_turbo
         zvec-ailego
         ${zvec_core_deps}
     )
-    target_link_options(zvec-core INTERFACE "/WHOLEARCHIVE:zvec_core")
+    target_link_options(zvec-core INTERFACE
+        "/WHOLEARCHIVE:zvec_core"
+        "/WHOLEARCHIVE:zvec_turbo"
+    )
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -379,18 +406,6 @@ endif()
 if(UNIX)
     set_property(TARGET ${PROJECT_NAME} PROPERTY SKIP_BUILD_RPATH TRUE)
 endif()
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${ZVEC_JIEBA_DICT_SRC}/jieba.dict.utf8"
-        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict/jieba.dict.utf8"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${ZVEC_JIEBA_DICT_SRC}/hmm_model.utf8"
-        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict/hmm_model.utf8"
-    COMMENT "Copying Jieba tokenizer dictionary"
-)
 
 # Strip symbols to reduce executable size
 if(CMAKE_BUILD_TYPE STREQUAL "Release")

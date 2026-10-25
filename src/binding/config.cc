@@ -187,41 +187,10 @@ Napi::Value Initialize(const Napi::CallbackInfo &info) {
     }
   }
 
-  if (obj.Has("jiebaDictDir")) {
-    if (obj.Get("jiebaDictDir").IsString()) {
-      config.jieba_dict_dir =
-          obj.Get("jiebaDictDir").As<Napi::String>().Utf8Value();
-    } else {
-      ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                            "Expected a string for 'jiebaDictDir'"));
-      return env.Undefined();
-    }
-  }
-
   if (auto s = zvec::GlobalConfig::Instance().initialize(config); !s.ok()) {
     ThrowIfNotOk(env, s);
   }
   return env.Undefined();
-}
-
-
-Napi::Value SetDefaultJiebaDictDir(const Napi::CallbackInfo &info) {
-  Napi::Env env = info.Env();
-  if (info.Length() != 1 || !info[0].IsString()) {
-    ThrowIfNotOk(env, zvec::Status::InvalidArgument(
-                          "setDefaultJiebaDictDir() expects exactly one "
-                          "argument: (dir: string)"));
-    return env.Undefined();
-  }
-  zvec::GlobalConfig::Instance().set_default_jieba_dict_dir(
-      info[0].As<Napi::String>().Utf8Value());
-  return env.Undefined();
-}
-
-
-Napi::Value GetDefaultJiebaDictDir(const Napi::CallbackInfo &info) {
-  return Napi::String::New(info.Env(),
-                           zvec::GlobalConfig::Instance().jieba_dict_dir());
 }
 
 
@@ -243,10 +212,6 @@ Napi::Object InitConfig(Napi::Env env, Napi::Object exports) {
   exports.Set("LogLevel", CreateLogLevelObject(env));
   exports.Set("IOBackendType", CreateIOBackendTypeObject(env));
   exports.Set("initialize", Napi::Function::New(env, Initialize));
-  exports.Set("setDefaultJiebaDictDir",
-              Napi::Function::New(env, SetDefaultJiebaDictDir));
-  exports.Set("getDefaultJiebaDictDir",
-              Napi::Function::New(env, GetDefaultJiebaDictDir));
   exports.Set("getIOBackendType", Napi::Function::New(env, GetIOBackendType));
   exports.Set("getIOBackendDescription",
               Napi::Function::New(env, GetIOBackendDescription));

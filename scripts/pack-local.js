@@ -6,67 +6,47 @@ const fs = require('fs');
 const path = require('path');
 const {
   BINARY_FILENAME,
-  JIEBA_DICT_DIRNAME,
   stageLocalArtifacts,
 } = require('./lib/artifacts');
 
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
-const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
-const originalPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
-const backupDir = fs.mkdtempSync(path.join(PACKAGE_ROOT, '.zvec-pack-local-'));
-const bundledEntries = [BINARY_FILENAME, JIEBA_DICT_DIRNAME];
-const entriesToRestore = [];
-
-
-function backupBundledEntries() {
-  for (const entry of bundledEntries) {
-    const sourcePath = path.join(PACKAGE_ROOT, entry);
-    if (fs.existsSync(sourcePath)) {
-      fs.renameSync(sourcePath, path.join(backupDir, entry));
-    }
-    // Restore only entries whose original state has been safely preserved.
-    entriesToRestore.push(entry);
-  }
-}
-
-
-function restoreBundledEntries() {
-  for (const entry of entriesToRestore) {
-    const targetPath = path.join(PACKAGE_ROOT, entry);
-    const backupPath = path.join(backupDir, entry);
-    fs.rmSync(targetPath, { recursive: true, force: true });
-    if (fs.existsSync(backupPath)) {
-      fs.renameSync(backupPath, targetPath);
-    }
-  }
-  fs.rmSync(backupDir, { recursive: true, force: true });
-}
 
 
 try {
-  // Build the bindings
-  execSync('npm run build', { stdio: 'inherit', cwd: PACKAGE_ROOT });
+  execSync('npm run build:release', { stdio: 'inherit', cwd: PACKAGE_ROOT });
 
-  // A local package bundles the just-built addon directly in the main package.
-  // Preserve any existing local artifacts and restore them after packing.
-  backupBundledEntries();
-  const staged = stageLocalArtifacts(PACKAGE_ROOT);
-  console.log(`Binary staged for local package at ${staged.binaryPath}`);
-  console.log(`Jieba dictionary staged at ${staged.jiebaDictDir}`);
-
-  // Temporarily remove optionalDependencies from package.json
-  // (local pack bundles the binary directly, no need for platform packages)
+  const packageJsonPath = path.join(PACKAGE_ROOT, 'package.json');
+  const originalPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
   const pkg = JSON.parse(originalPackageJson);
-  delete pkg.optionalDependencies;
-  fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+  const binaryPath = path.join(PACKAGE_ROOT, BINARY_FILENAME);
+  const backupDir = fs.mkdtempSync(path.join(PACKAGE_ROOT, '.zvec-pack-local-'));
+  const backupPath = path.join(backupDir, BINARY_FILENAME);
+  let binaryPrepared = false;
 
-  // Pack
-  execSync('npm pack', { stdio: 'inherit', cwd: PACKAGE_ROOT, encoding: 'utf8' });
+  try {
+    if (fs.existsSync(binaryPath)) {
+      fs.renameSync(binaryPath, backupPath);
+    }
+    binaryPrepared = true;
+
+    const staged = stageLocalArtifacts(PACKAGE_ROOT);
+    console.log(`Binary staged for local package at ${staged.binaryPath}`);
+
+    delete pkg.optionalDependencies;
+    fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+    execSync('npm pack', { stdio: 'inherit', cwd: PACKAGE_ROOT });
+  } finally {
+    fs.writeFileSync(packageJsonPath, originalPackageJson);
+    if (binaryPrepared) {
+      fs.rmSync(binaryPath, { force: true });
+      if (fs.existsSync(backupPath)) {
+        fs.renameSync(backupPath, binaryPath);
+      }
+    }
+    fs.rmSync(backupDir, { recursive: true, force: true });
+  }
 } catch (error) {
   console.error('❌ Error during build and packaging:', error.message);
   process.exitCode = 1;
-} finally {
-  fs.writeFileSync(packageJsonPath, originalPackageJson);
-  restoreBundledEntries();
 }
