@@ -1560,7 +1560,39 @@ zvec::Result<zvec::DiskAnnQueryParams::Ptr> ParseDiskAnnQueryParams(
           zvec::Status::InvalidArgument("Expected a number for 'listSize'"));
     }
   }
-  return std::make_shared<zvec::DiskAnnQueryParams>(list_size);
+
+  float radius{0.0f};
+  if (obj.Has("radius")) {
+    if (!obj.Get("radius").IsNumber()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a number for 'radius'"));
+    }
+    radius = obj.Get("radius").As<Napi::Number>().FloatValue();
+  }
+
+  bool is_linear{false};
+  if (obj.Has("isLinear")) {
+    if (!obj.Get("isLinear").IsBoolean()) {
+      return tl::make_unexpected(
+          zvec::Status::InvalidArgument("Expected a boolean for 'isLinear'"));
+    }
+    is_linear = obj.Get("isLinear").As<Napi::Boolean>().Value();
+  }
+
+  bool is_using_refiner{false};
+  if (obj.Has("isUsingRefiner")) {
+    if (!obj.Get("isUsingRefiner").IsBoolean()) {
+      return tl::make_unexpected(zvec::Status::InvalidArgument(
+          "Expected a boolean for 'isUsingRefiner'"));
+    }
+    is_using_refiner = obj.Get("isUsingRefiner").As<Napi::Boolean>().Value();
+  }
+
+  auto params = std::make_shared<zvec::DiskAnnQueryParams>(list_size);
+  params->set_radius(radius);
+  params->set_is_linear(is_linear);
+  params->set_is_using_refiner(is_using_refiner);
+  return params;
 }
 
 
