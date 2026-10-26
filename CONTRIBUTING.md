@@ -69,14 +69,6 @@ After modifying the binding code, you should run the test suite to ensure your c
 npm run test:unit
 ```
 
-### Editor Configuration
-
-If you are using **clangd** for code intelligence, you may want to merge the compilation database. This is necessary because the project relies on external submodules, which results in separate **compile_commands.json** files.
-
-```bash
-python ./scripts/merge_compile_commands.py
-```
-
 ## Local Distribution
 
 If you prefer to build the binding from source and generate a single, self-contained package (including the pre-built binary for your current platform), use the local packing script.

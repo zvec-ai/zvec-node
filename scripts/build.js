@@ -52,7 +52,11 @@ try {
 
   console.log(`\nCompiling native addon. Jobs: ${JOBS}, Build type: ${BUILD_TYPE}.`);
   console.log(`Running command: ${cmd}\n`);
-  execSync(cmd, { stdio: 'inherit', cwd: PACKAGE_ROOT });
+  const buildEnv = { ...process.env };
+  if (process.platform === 'darwin') {
+    buildEnv.MACOSX_DEPLOYMENT_TARGET ||= '11.0';
+  }
+  execSync(cmd, { stdio: 'inherit', cwd: PACKAGE_ROOT, env: buildEnv });
   const artifacts = verifyBuildArtifacts(PACKAGE_ROOT, BUILD_TYPE);
   console.log(`✅ Native addon compiled at: ${artifacts.binaryPath}`);
 } catch (error) {
